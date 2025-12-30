@@ -15,7 +15,10 @@
     "commands": [{
       "command": "visualdebugger.helloWorld",
       "title": "Hello World"
-    }]
+      }, 
+      {"command":"execute_C",
+          "title":"Execute C"
+      }]
   },
   "scripts": {
     "lint": "eslint .",
