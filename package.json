@@ -18,7 +18,26 @@
       }, 
       {"command":"execute_C",
           "title":"Execute C"
-      }]
+      }
+    ],
+      "viewsContainers": {
+        "activitybar": [
+          {
+            "id":"IntroView",
+            "title": "Visual Debugger", 
+            "icon": "cat.svg"
+          }
+        ]
+      },
+      "views":{
+        "IntroView":[{
+          "id": "first_panel",
+          "name": "Visual Debugger",
+          "icon": "cat.svg"
+        }
+
+        ]
+      }
   },
   "scripts": {
     "lint": "eslint .",
