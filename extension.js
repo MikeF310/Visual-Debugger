@@ -5,8 +5,8 @@ const { spawn, exec } = require('child_process');	//only accessing the exec meth
 
 
 
-// This method is called when your extension is activated
-// Your extension is activated the very first time the command is executed
+
+
 
 /**
  * @param {vscode.ExtensionContext} context
@@ -54,40 +54,32 @@ function activate(context) {
 				}
 			}
 
-
 		};
+		/*
 		context.subscriptions.push(vscode.debug.registerDebugAdapterTrackerFactory('cppdbg',tracker));
 		const session = vscode.debug.activeDebugSession;
 		const response = await session.customRequest('stackTrace', { threadId: 1 });
 		const frameId = response.stackFrames[0].id;
 		const r = await vscode.debug.activeDebugSession.customRequest('evaluate', {expression: 'x', frameId});
 		console.log(`Result -> ${r.result}`);
+		*/
 		});
-
+		
 
 
 		
-	const run_C = vscode.commands.registerCommand('execute_C', async function (){
+	const run_gdb = vscode.commands.registerCommand('execute_gdb', async function (){
 
 		const file_name = await vscode.window.showInputBox({
-			prompt: "Enter the C Executable Name",
+			prompt: "Enter the Executable Name",
 			value:"a.exe"
 		}) ?? "a.exe";
 
 		if (file_name != undefined){
 
-
-			//const userTerminal = vscode.window.activeTerminal;
-			//userTerminal.show();
+			//Using the spawn function in order to open the powershell terminal, and feed it commands.
+			//Spawn can be opened and fed multiple line commands until it's manually closed.
 			
-
-			
-			//userTerminal.sendText(`gcc -g ${file_name}.c -o test`); 
-
-			/*
-			Using the spawn function in order to open the powershell terminal, and feed it commands.
-			Spawn can be opened and fed multiple line commands until it's manually closed.
-			*/
 			process = spawn("powershell.exe", [`gdb`, `${file_name}`],{cwd: folder_path});
 			
 			
@@ -108,7 +100,6 @@ function activate(context) {
 	const gdbCommand = vscode.commands.registerCommand('gdb_command', async function() {
 
 		if (process && process.stdin){
-			console.log("HI");
 			const command = await vscode.window.showInputBox({
 			prompt: "Enter a GDB command",
 			value:"info locals"
@@ -122,10 +113,12 @@ function activate(context) {
 		}
 				
 	});
+
 	context.subscriptions.push(gdbCommand)
-	context.subscriptions.push(run_C);
+	context.subscriptions.push(run_gdb);
 	context.subscriptions.push(disposable);
 }
+
 
 // This method is called when your extension is deactivated
 function deactivate() {}

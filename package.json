@@ -18,8 +18,8 @@
         "title": "Run VD"
       },
       {
-        "command": "execute_C",
-        "title": "Execute C"
+        "command": "execute_gdb",
+        "title": "Execute GDB"
       },
       {
         "command":"gdb_command",
