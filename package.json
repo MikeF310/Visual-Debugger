@@ -12,32 +12,38 @@
   "activationEvents": [],
   "main": "./extension.js",
   "contributes": {
-    "commands": [{
-      "command": "visualdebugger.helloWorld",
-      "title": "Hello World"
-      }, 
-      {"command":"execute_C",
-          "title":"Execute C"
+    "commands": [
+      {
+        "command": "startVD",
+        "title": "Run VD"
+      },
+      {
+        "command": "execute_C",
+        "title": "Execute C"
+      },
+      {
+        "command":"gdb_command",
+        "title": "GDB Command"
       }
     ],
-      "viewsContainers": {
-        "activitybar": [
-          {
-            "id":"IntroView",
-            "title": "Visual Debugger", 
-            "icon": "cat.svg"
-          }
-        ]
-      },
-      "views":{
-        "IntroView":[{
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "IntroView",
+          "title": "Visual Debugger",
+          "icon": "cat.svg"
+        }
+      ]
+    },
+    "views": {
+      "IntroView": [
+        {
           "id": "first_panel",
           "name": "Visual Debugger",
           "icon": "cat.svg"
         }
-
-        ]
-      }
+      ]
+    }
   },
   "scripts": {
     "lint": "eslint .",
@@ -45,11 +51,14 @@
     "test": "vscode-test"
   },
   "devDependencies": {
-    "@types/vscode": "^1.107.0",
     "@types/mocha": "^10.0.10",
     "@types/node": "22.x",
-    "eslint": "^9.39.1",
+    "@types/vscode": "^1.107.0",
     "@vscode/test-cli": "^0.0.12",
-    "@vscode/test-electron": "^2.5.2"
+    "@vscode/test-electron": "^2.5.2",
+    "eslint": "^9.39.1"
+  },
+  "dependencies": {
+    "debug-tracker-vscode": "^0.0.15"
   }
 }
