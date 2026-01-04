@@ -24,6 +24,10 @@
       {
         "command":"gdb_command",
         "title": "GDB Command"
+      },
+      {
+        "command":"DAP_command",
+        "title": "DAP Command"
       }
     ],
     "viewsContainers": {

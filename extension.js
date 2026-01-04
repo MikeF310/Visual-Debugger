@@ -4,17 +4,12 @@ const vscode = require('vscode');
 const { spawn, exec } = require('child_process');	//only accessing the exec method
 
 
-
-
-
-
 /**
  * @param {vscode.ExtensionContext} context
  */
 function activate(context) {
 
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
+
 	console.log('Congratulations, your extension "visualdebugger" is now active!');
 
 	//List of open folders
@@ -24,12 +19,14 @@ function activate(context) {
 
 
 	let process;
+
 	const disposable = vscode.commands.registerCommand('startVD', async function () {
 
 		vscode.window.showInformationMessage('Visual Debugger running!');
 
 		vscode.debug.startDebugging(folders[0],"(gdb) Launch");
 
+		//These are a bunch of event listeners to track communication between our debugAdapter variable and the VSCode built-in debugger.
 		const tracker = {
 			createDebugAdapterTracker(){
 				return {
@@ -38,42 +35,63 @@ function activate(context) {
 					},
 
 					onDidSendMessage(message){
-						console.log(`Message to VSCode-> ${message}`);
+						//console.log(`Message to VSCode-> ${JSON.stringify(message)}`);
 					},
 					onWillReceiveMessage(message){
-						console.log(`Message to DAP -> ${message}`);
+						//console.log(`Message to DAP -> ${JSON.stringify(message)}`);
 					},
 
 					onExit(code,signal){
-						console.log(`Debugger exited`)
+						//console.log(`Debugger exited`)
 					},
 					onDidReceiveDebugSessionCustomEvent(message){
-						console.log("Receiving custom event ",message);
+						console.log("Receiving custom event ",JSON.stringify(message));
 					}
 		
 				}
 			}
 
 		};
-		/*
+		
 		context.subscriptions.push(vscode.debug.registerDebugAdapterTrackerFactory('cppdbg',tracker));
-		const session = vscode.debug.activeDebugSession;
-		const response = await session.customRequest('stackTrace', { threadId: 1 });
-		const frameId = response.stackFrames[0].id;
-		const r = await vscode.debug.activeDebugSession.customRequest('evaluate', {expression: 'x', frameId});
-		console.log(`Result -> ${r.result}`);
-		*/
+		
 		});
 		
+		//This command sends a series of custom requests to the VSCode built-in debugger in order to see the local variables.
+		const vsGDB = vscode.commands.registerCommand("DAP_command", async function () {
+		let debug = vscode.debug.activeDebugSession;
+		if (debug){
 
 
-		
+			const stack = await debug.customRequest('stackTrace', {
+				threadId: 1
+			});
+			const frameId = stack.stackFrames[0].id;
+
+			const scopes = await debug.customRequest("scopes", {
+				frameId
+			})
+			const localScope = scopes.scopes.find(s => s.name == "Locals");
+
+			const vars = await debug.customRequest("variables", {
+				variablesReference: localScope.variablesReference
+			})
+			console.log("VARIABLES -> ",vars.variables);
+
+		}
+		else{
+			vscode.window.showErrorMessage("There is no debug console active!")
+		}
+	});
+
+
+	//Runs GDB on the executable that the user defines.
 	const run_gdb = vscode.commands.registerCommand('execute_gdb', async function (){
 
 		const file_name = await vscode.window.showInputBox({
 			prompt: "Enter the Executable Name",
 			value:"a.exe"
-		}) ?? "a.exe";
+		}) ?? "";
 
 		if (file_name != undefined){
 
@@ -114,6 +132,7 @@ function activate(context) {
 				
 	});
 
+	context.subscriptions.push(vsGDB);
 	context.subscriptions.push(gdbCommand)
 	context.subscriptions.push(run_gdb);
 	context.subscriptions.push(disposable);
