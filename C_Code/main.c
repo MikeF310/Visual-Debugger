@@ -1,18 +1,62 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-int second(){
-    int z = 20;
+//Linked List struct, for future use.
+typedef struct Node {
+    struct Node *next;
+    int data;
+}node_t;
 
-    printf("Ending main2!");
+//Need to allocate memory to the array in order to its data outside of the function.
+int* int_array(int size){
+
+    int ex[3] = {1,2,3};
+    
+    int* dynamic_array = (int *) malloc(size * sizeof(int));
+
+    for (int i = 0; i < size; i++){
+        dynamic_array[i] = i;
+    }
+    
+    return dynamic_array;
 }
 
-int main(){
-    int x = 9;
+
+//Functions used to experiment with the call stack.
+int compute_sum(int a, int b) {
+    int sum = a + b;
+    int x;
+    printf("Compute: %d \n", 3);
+    return sum;
+}
+
+int compute_product(int a, int b) {
+    int r;
+    int product = a * b;
+    return product;
+}
+
+void print_result(int sum, int product) {
+    printf("Sum: %d\n", sum);
+    printf("Product: %d\n", product);
+}
+
+int main() {
+
+    int x = 6;
+    int y = 3;
+
+    int *m = (int *) malloc(4);
+
+    //int sum = compute_sum(x, y);
+    //int product = compute_product(x, y);
+
     int *a = &x;
-    int *b = (int *) malloc(40);
-    printf("First Output!");
-    second();
+
+    int *example_arr = int_array(4);
+
+    int z = x + y;
+
+    free(example_arr);
     return 0;
 }
-

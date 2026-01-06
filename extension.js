@@ -22,8 +22,8 @@ function activate(context) {
 
 	const disposable = vscode.commands.registerCommand('startVD', async function () {
 
-		vscode.window.showInformationMessage('Visual Debugger running!');
 
+		vscode.window.showInformationMessage('Visual Debugger running!');
 		vscode.debug.startDebugging(folders[0],"(gdb) Launch");
 
 		//These are a bunch of event listeners to track communication between our debugAdapter variable and the VSCode built-in debugger.
@@ -31,10 +31,11 @@ function activate(context) {
 			createDebugAdapterTracker(){
 				return {
 					onWillStartSession(){
-						console.log("Starting VDebug! \n")
+						
+						console.log("Starting VDbug! \n");
 					},
 
-					onDidSendMessage(message){
+					onDidSendiMessage(message){
 						//console.log(`Message to VSCode-> ${JSON.stringify(message)}`);
 					},
 					onWillReceiveMessage(message){
@@ -98,7 +99,7 @@ function activate(context) {
 			//Using the spawn function in order to open the powershell terminal, and feed it commands.
 			//Spawn can be opened and fed multiple line commands until it's manually closed.
 			
-			process = spawn("powershell.exe", [`gdb`, `${file_name}`],{cwd: folder_path});
+			process = spawn("gdb", [ `${file_name}`],{cwd: folder_path});
 			
 			
 			process.stdout.on("data", (data) => {
@@ -128,8 +129,7 @@ function activate(context) {
 		else{
 			vscode.window.showErrorMessage("GDB is not running");
 			return;
-		}
-				
+		}			
 	});
 
 	context.subscriptions.push(vsGDB);
