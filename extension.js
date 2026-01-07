@@ -9,7 +9,6 @@ const { spawn, exec } = require('child_process');	//only accessing the exec meth
  */
 function activate(context) {
 
-
 	console.log('Congratulations, your extension "visualdebugger" is now active!');
 
 	//List of open folders
@@ -20,11 +19,7 @@ function activate(context) {
 
 	let process;
 
-
-
 		
-
-
 	//Runs GDB on the executable that the user defines.
 	const run_gdb = vscode.commands.registerCommand('execute_gdb', async function (){
 
@@ -38,7 +33,7 @@ function activate(context) {
 			//Using the spawn function in order to open the powershell terminal, and feed it commands.
 			//Spawn can be opened and fed multiple line commands until it's manually closed.
 			
-			process = spawn("gdb", [ `${file_name}`],{cwd: folder_path});
+			process = spawn("gdb", [`file`, `${file_name}`],{cwd: folder_path});
 			
 			
 			process.stdout.on("data", (data) => {
@@ -55,6 +50,7 @@ function activate(context) {
 		}
 	});
 
+	//Send user's gdb command.
 	const gdbCommand = vscode.commands.registerCommand('gdb_command', async function() {
 
 		if (process && process.stdin){
@@ -63,6 +59,7 @@ function activate(context) {
 			value:"info locals"
 		});
 
+			console.log("HI!");
 			process.stdin.write(command + '\n');
 		}
 		else{
@@ -71,10 +68,8 @@ function activate(context) {
 		}			
 	});
 
-	context.subscriptions.push(vsGDB);
 	context.subscriptions.push(gdbCommand)
 	context.subscriptions.push(run_gdb);
-	context.subscriptions.push(disposable);
 }
 
 
