@@ -20,70 +20,9 @@ function activate(context) {
 
 	let process;
 
-	const disposable = vscode.commands.registerCommand('startVD', async function () {
 
 
-		vscode.window.showInformationMessage('Visual Debugger running!');
-		vscode.debug.startDebugging(folders[0],"(gdb) Launch");
-
-		//These are a bunch of event listeners to track communication between our debugAdapter variable and the VSCode built-in debugger.
-		const tracker = {
-			createDebugAdapterTracker(){
-				return {
-					onWillStartSession(){
-						
-						console.log("Starting VDbug! \n");
-					},
-
-					onDidSendiMessage(message){
-						//console.log(`Message to VSCode-> ${JSON.stringify(message)}`);
-					},
-					onWillReceiveMessage(message){
-						//console.log(`Message to DAP -> ${JSON.stringify(message)}`);
-					},
-
-					onExit(code,signal){
-						//console.log(`Debugger exited`)
-					},
-					onDidReceiveDebugSessionCustomEvent(message){
-						console.log("Receiving custom event ",JSON.stringify(message));
-					}
 		
-				}
-			}
-
-		};
-		
-		context.subscriptions.push(vscode.debug.registerDebugAdapterTrackerFactory('cppdbg',tracker));
-		
-		});
-		
-		//This command sends a series of custom requests to the VSCode built-in debugger in order to see the local variables.
-		const vsGDB = vscode.commands.registerCommand("DAP_command", async function () {
-		let debug = vscode.debug.activeDebugSession;
-		if (debug){
-
-
-			const stack = await debug.customRequest('stackTrace', {
-				threadId: 1
-			});
-			const frameId = stack.stackFrames[0].id;
-
-			const scopes = await debug.customRequest("scopes", {
-				frameId
-			})
-			const localScope = scopes.scopes.find(s => s.name == "Locals");
-
-			const vars = await debug.customRequest("variables", {
-				variablesReference: localScope.variablesReference
-			})
-			console.log("VARIABLES -> ",vars.variables);
-
-		}
-		else{
-			vscode.window.showErrorMessage("There is no debug console active!")
-		}
-	});
 
 
 	//Runs GDB on the executable that the user defines.
@@ -91,7 +30,7 @@ function activate(context) {
 
 		const file_name = await vscode.window.showInputBox({
 			prompt: "Enter the Executable Name",
-			value:"a.exe"
+			value:"a.out"
 		}) ?? "";
 
 		if (file_name != undefined){
