@@ -22,12 +22,16 @@
         "title": "Execute GDB"
       },
       {
-        "command":"gdb_command",
+        "command": "gdb_command",
         "title": "GDB Command"
       },
       {
-        "command":"DAP_command",
+        "command": "DAP_command",
         "title": "DAP Command"
+      },
+      {
+        "command": "hi",
+        "title": "SAY HI!!"
       }
     ],
     "viewsContainers": {
@@ -56,13 +60,14 @@
   },
   "devDependencies": {
     "@types/mocha": "^10.0.10",
-    "@types/node": "22.x",
+    "@types/node": "^22.19.3",
     "@types/vscode": "^1.107.0",
     "@vscode/test-cli": "^0.0.12",
     "@vscode/test-electron": "^2.5.2",
     "eslint": "^9.39.1"
   },
   "dependencies": {
-    "debug-tracker-vscode": "^0.0.15"
+    "debug-tracker-vscode": "^0.0.15",
+    "keypress": "^0.2.1"
   }
 }
