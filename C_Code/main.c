@@ -7,6 +7,11 @@ typedef struct Node {
     int data;
 }node_t;
 
+typedef struct Person {
+    int age;
+    char name[50];
+} person;
+
 //Need to allocate memory to the array in order to its data outside of the function.
 int* int_array(int size){
 
@@ -17,9 +22,6 @@ int* int_array(int size){
     for (int i = 0; i < 4; i++){
         dynamic_array[i] = i;
     }
-    
-
-
     return dynamic_array;
 }
 
@@ -51,19 +53,18 @@ int main() {
     int *m = (int *) malloc(31);
 
     m = &y;
-
-
     //int sum = compute_sum(x, y);
     //int product = compute_product(x, y);
 
+    //Struct
+    person thomas = {21,"Thomas"};
+    printf("Name: %s, Age: %d \n",thomas.name,thomas.age);
     int *a = &x;
 
-    
     int *example_arr = int_array(4);
 
     int z = x + y;
 
-    printf("Out of bounds \n");
     header_print();
     free(example_arr);
     return 0;

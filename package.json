@@ -3,6 +3,7 @@
   "displayName": "VisualDebugger",
   "description": "A Visual Debugger for C. Shows memory, pointers, and stack and heap data.",
   "version": "0.0.1",
+  "type" : "commonjs",
   "engines": {
     "vscode": "^1.107.0"
   },
