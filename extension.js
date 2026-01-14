@@ -192,19 +192,26 @@ function activate(context) {
 	}
 		*/ 
 	//In Progress.
+	//If we encounter 
 	function captureLocalVars(data){
 		
+		let isStruct = false;
 		let localJSON = {};
-		let lines = data.split(/\r?\n/);
+		let localLines = data.split(/\r?\n/);
 
-		for (let i = 0; i < lines.length - 1; i++){
-			console.log("Variable -> : " + lines[i] + "\n");
-		
+		//{"x":"5"}
+		let var_value;
+		for (let i = 0; i < localLines.length - 1; i++){
+			console.log("Variable -> : " + localLines[i]);
+			const var_value = /([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*(.+)/.exec(localLines[i]);
+			console.log(`Var val -> ${var_value[1]} = ${var_value[0]}`);
+			localJSON[var_value[1]] = var_value[0];
 		}
 		//Use regex capture groups. x = 5 -> ["x","5"]
+		
+		//console.log("JSON -> \n",JSON.stringify(JSON));
 
 		
-
 	}
 	context.subscriptions.push(gdbCommand)
 	context.subscriptions.push(run_gdb);

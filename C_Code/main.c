@@ -45,10 +45,11 @@ void print_result(int sum, int product) {
     printf("Product: %d\n", product);
 }
 
+
 int main() {
 
     int x = 6;
-    int y = 3;
+    int y = 10;
 
     int *m = (int *) malloc(31);
 
@@ -57,8 +58,8 @@ int main() {
     //int product = compute_product(x, y);
 
     //Struct
-    person thomas = {21,"Thomas"};
-    printf("Name: %s, Age: %d \n",thomas.name,thomas.age);
+   // person thomas = {21,"Thomas"};
+    //printf("Name: %s, Age: %d \n",thomas.name,thomas.age);
     int *a = &x;
 
     int *example_arr = int_array(4);
