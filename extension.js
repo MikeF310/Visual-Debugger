@@ -12,14 +12,6 @@ const { spawn } = require('child_process');	//only accessing the exec method
  */
 function activate(context) {
 
-
-	console.log('Congratulations, your extension "visualdebugger" is now active!');
-	console.log("\u27A4");
-	const hello = vscode.commands.registerCommand('hi', async function(){
-		vscode.window.showInformationMessage("HI!!");
-	})
-
-	
 	//List of open folders
 	let folders = vscode.workspace.workspaceFolders;
 	//Grabs the first one/ the currently open folder.
@@ -48,6 +40,10 @@ function activate(context) {
 			case "info locals":
 				captureLocalVars(data);
 				break;
+			case "frame":
+				captureFrame(data);
+				break;
+
 		}
 	}
 	//Runs GDB on the executable that the user defines.
@@ -195,28 +191,34 @@ function activate(context) {
 	//If we encounter 
 	function captureLocalVars(data){
 		
+		
 		let isStruct = false;
 		let localJSON = {};
 		let localLines = data.split(/\r?\n/);
 
 		//{"x":"5"}
-		let var_value;
+		
 		for (let i = 0; i < localLines.length - 1; i++){
-			console.log("Variable -> : " + localLines[i]);
 			const var_value = /([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*(.+)/.exec(localLines[i]);
-			console.log(`Var val -> ${var_value[1]} = ${var_value[0]}`);
-			localJSON[var_value[1]] = var_value[0];
+			console.log(`Var val -> ${var_value[1]} = ${var_value[2]}`);
+			localJSON[var_value[1]] = {type: "int", value: var_value[2]};
+			//var_value = ["x = 0", "x","0"]
 		}
-		//Use regex capture groups. x = 5 -> ["x","5"]
 		
-		//console.log("JSON -> \n",JSON.stringify(JSON));
-
-		
+		//Converts object to a JSON.
+		console.log("JSON -> \n",JSON.stringify({
+			local_variables: localJSON			//"localVariables":[localJSON]
+		}));
+			
 	}
+
+	function captureFrame(data){
+		//for (let i = 0; )
+	}
+
 	context.subscriptions.push(gdbCommand)
 	context.subscriptions.push(run_gdb);
 
-	context.subscriptions.push(hello);
 }
 
 

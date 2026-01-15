@@ -29,14 +29,11 @@ int* int_array(int size){
 //Functions used to experiment with the call stack.
 int compute_sum(int a, int b) {
     int sum = a + b;
-    int x;
-    printf("Compute: %d \n", 3);
     return sum;
 }
 
 int compute_product(int a, int b) {
-    int r;
-    int product = a * b;
+    int product = compute_sum(a,b) * b;
     return product;
 }
 
@@ -55,7 +52,7 @@ int main() {
 
     m = &y;
     //int sum = compute_sum(x, y);
-    //int product = compute_product(x, y);
+    int product = compute_product(x, y);
 
     //Struct
    // person thomas = {21,"Thomas"};
