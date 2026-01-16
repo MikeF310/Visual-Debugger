@@ -48,8 +48,15 @@
           "icon": "cat.svg"
         }
       ]
+    },
+     "viewsWelcome":[
+    {
+      "view":"first_panel",
+      "contents":"[Execute GDB](command:execute_gdb)"
     }
+  ] 
   },
+ 
   "scripts": {
     "lint": "eslint .",
     "pretest": "npm run lint",

@@ -58,6 +58,9 @@ function activate(context) {
 
 		}
 	}
+		vscode.commands.registerCommand("visualDebugger.start", () => {
+  			vscode.window.showInformationMessage("Clicked!");
+		});
 	//Runs GDB on the executable that the user defines.
 	const run_gdb = vscode.commands.registerCommand('execute_gdb', async function (){
 		const file_name = await vscode.window.showInputBox({
@@ -104,7 +107,6 @@ function activate(context) {
 							line += data;	//Build the line that the user is inputting, character by character.
 						}	
 						
-						
 					},
 				}
 				terminal = vscode.window.createTerminal({name: "VDBUG", pty: pseudoTerminal});
@@ -139,7 +141,8 @@ function activate(context) {
 
 				gdb.on('close', code => {
 					console.log(`GDB exited with code ${code}`);
-					writeEmitter.fire(`\r\nGDB exited with code ${code} \n`);
+
+					writeEmitter.fire(`\nGDB exited with code ${code} \r\n`.trim());
 				});
 
 				gdb.stderr.on('data', data => {
