@@ -17,11 +17,15 @@
 
 #include <cstring>
 #include <string>
+#include <map>
 
 int plugin_is_GPL_compatible;
 
 static unsigned g_site_counter = 1;
 int alloc_count = 1;
+
+std::map<const char*, const char*> var_init = {};
+
 // ---- Helpers: "user code only" filter ----
 static bool is_system_path(const char *p) {
   if (!p) return true;
@@ -48,8 +52,26 @@ static void log_mem(unsigned site, gimple *stmt, const char *alloc) {
 
   if (!file) file = "<unknown>";
 
-  
-  fprintf(stderr, "[%s site %u] %s:%d:%d\n", alloc,site, file, line, col);
+  if (!is_gimple_call(stmt)){ 
+    return;
+  } 
+
+    tree lhs = gimple_call_lhs(stmt);
+    if (!lhs) return;
+    if (TREE_CODE(lhs) != VAR_DECL)
+          return;
+
+    if (DECL_ARTIFICIAL(lhs))
+        return;
+
+    if (!DECL_NAME(lhs))
+        return;
+    
+      
+      
+    const char *var_name = IDENTIFIER_POINTER(DECL_NAME(lhs));
+
+  fprintf(stderr, "var %s[%s site %u] %s:%d:%d\n", var_name,alloc,site, file, line, col);
   
   
 }
@@ -61,7 +83,24 @@ static void log_write(unsigned site, gimple *stmt) {
 
   if (!file) file = "<unknown>";
 
-  fprintf(stderr, "[memwrite site %u] %s:%d:%d\n", site, file, line, col);
+  //Grab variable name from stmt.
+  if (!is_gimple_assign(stmt))
+        return;
+
+    tree lhs = gimple_assign_lhs(stmt);
+
+    if (TREE_CODE(lhs) != VAR_DECL)
+        return;
+
+    if (DECL_ARTIFICIAL(lhs))
+        return;
+
+    if (!DECL_NAME(lhs))
+        return;
+      
+    const char *var_name = IDENTIFIER_POINTER(DECL_NAME(lhs));
+
+  fprintf(stderr, "var %s [memwrite site %u] %s:%d:%d\n",var_name,site, file, line, col);
   
 }
 
@@ -125,7 +164,16 @@ static void log_decl(void *gcc_data, void *user_data){
     }
 
   if (is_system_path(exloc.file)) return;
-  fprintf(stderr,"%s Variable %s has been declared at file %s, line %d \n",type_name,name,exloc.file,exloc.line);
+
+  if(DECL_INITIAL(decl)){
+    fprintf(stderr,"%s Variable %s has been declared and initalized at file %s, line %d \n",type_name,name,exloc.file,exloc.line);
+    var_init[type_name] = "init";
+
+  }else{
+    fprintf(stderr,"%s Variable %s has been declared at file %s, line %d \n",type_name,name,exloc.file,exloc.line);
+    var_init[type_name] = "uninit";
+    
+  }
 
 }
 
@@ -227,10 +275,12 @@ static void instrument_alloc_if_any(gimple_stmt_iterator *gsi, gimple *stmt) {
   gsi_insert_after(gsi, logcall, GSI_NEW_STMT);
 }
 
+
 // Instrument stores:
 //   tmp = RHS
 //   __memlog_store(site, &LHS, sizeof(LHS), &tmp)
 //   LHS = tmp
+//Use this function to also flag any first initializations.
 static void instrument_store_if_any(gimple_stmt_iterator *gsi, gimple *stmt) {
   if (!is_gimple_assign(stmt)) return;
 
@@ -247,12 +297,12 @@ static void instrument_store_if_any(gimple_stmt_iterator *gsi, gimple *stmt) {
       (lhs_code == COMPONENT_REF) ||
       (lhs_code == INDIRECT_REF);
 
-  bool is_var_store =
-      (lhs_code == VAR_DECL);
+  bool is_var_store = (lhs_code == VAR_DECL);
 
   if (!is_mem_store && !is_var_store) return;
 
   unsigned site = g_site_counter++;
+
   log_write(site,stmt);
 
   // Runtime hook: void __memlog_store(uint32_t, const void*, size_t, const void*)
@@ -276,7 +326,7 @@ static void instrument_store_if_any(gimple_stmt_iterator *gsi, gimple *stmt) {
   // We always do it, for simplicity.
 
   tree lhs_type = TREE_TYPE(lhs);
-  if (!lhs_type) return;
+  if (!lhs_type)return;
 
   // Create a temporary to hold the value being written
     tree tmp = create_tmp_var(lhs_type, "memlog_tmp");

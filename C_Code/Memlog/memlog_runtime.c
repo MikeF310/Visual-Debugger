@@ -3,7 +3,6 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include <json-c/json.h>
 
 
 static FILE *g_out;

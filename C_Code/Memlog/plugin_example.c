@@ -16,6 +16,7 @@ int main()
     printf("This is a number:%d \n",x);
     int *mal = (int *) malloc(35);
 
+    int* imright = {1,2,3,4};
     mal[0] = 5;
     mal[1] = 8;
 
