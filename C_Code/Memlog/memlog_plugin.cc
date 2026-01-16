@@ -40,20 +40,93 @@ static bool stmt_is_user_code(gimple *stmt) {
 
 
 //Helper to determine line number of allocs/memory writes
-static void log_site(unsigned site, gimple *stmt, int type) {
+static void log_mem(unsigned site, gimple *stmt, const char *alloc) {
   location_t loc = gimple_location(stmt);
   const char *file = LOCATION_FILE(loc);
   int line = LOCATION_LINE(loc);
-  int col  = LOCATION_COLUMN(loc);
+  int col  = LOCATION_COLUMN(loc); 
 
   if (!file) file = "<unknown>";
 
-  if(type == 0){
-  fprintf(stderr, "[memlog site %u] %s:%d:%d\n", site, file, line, col);
-  }
-  else {
-    fprintf(stderr, "[memwrite site %u] %s:%d:%d\n", site, file, line, col);
-  }
+  
+  fprintf(stderr, "[%s site %u] %s:%d:%d\n", alloc,site, file, line, col);
+  
+  
+}
+static void log_write(unsigned site, gimple *stmt) {
+  location_t loc = gimple_location(stmt);
+  const char *file = LOCATION_FILE(loc);
+  int line = LOCATION_LINE(loc);
+  int col  = LOCATION_COLUMN(loc); 
+
+  if (!file) file = "<unknown>";
+
+  fprintf(stderr, "[memwrite site %u] %s:%d:%d\n", site, file, line, col);
+  
+}
+
+//Prints line of variable declarations, with type too.
+static void log_decl(void *gcc_data, void *user_data){
+
+  tree decl = (tree)gcc_data;
+
+  tree type = TREE_TYPE(decl);
+
+  const char *type_name;
+
+  //TREE_CODE returns type of tree node. Only continue if tree node is a var declaration.
+  if (TREE_CODE(decl) != VAR_DECL) return;
+
+   /* Ignore compiler-generated variables */
+  if (DECL_ARTIFICIAL(decl)) return;
+
+  location_t loc = DECL_SOURCE_LOCATION(decl);
+  if(loc == UNKNOWN_LOCATION) return;
+
+  //Expanded location is a struct with *char file, int line, int column.
+  expanded_location exloc = expand_location(loc);
+
+  if (!exloc.file || exloc.line == 0) return;
+  
+  const char* name = IDENTIFIER_POINTER(DECL_NAME(decl));
+
+  //Grab type of variable.
+  switch (TREE_CODE(type)) {
+        case INTEGER_TYPE:
+            type_name = TYPE_UNSIGNED(type) ? "unsigned int" : "int";
+            break;
+        case REAL_TYPE:
+            type_name = "float/double";
+            break;
+        case POINTER_TYPE:
+            type_name = "pointer";
+            break;
+        case ARRAY_TYPE:
+            type_name = "array";
+            break;
+        case RECORD_TYPE:
+            type_name = "struct/class";
+            break;
+        case ENUMERAL_TYPE:
+            type_name = "enum";
+            break;
+        case FUNCTION_TYPE:
+            type_name = "function";
+            break;
+        case VOID_TYPE:
+            type_name = "void";
+            break;
+        case BOOLEAN_TYPE:
+            type_name = "bool";
+            break;
+        default:
+            type_name = "other";
+            break;
+    }
+
+  if (is_system_path(exloc.file)) return;
+  fprintf(stderr,"%s Variable %s has been declared at file %s, line %d \n",type_name,name,exloc.file,exloc.line);
+
 }
 
 // ---- Declare runtime hooks we will insert calls to ----
@@ -105,12 +178,12 @@ static void instrument_alloc_if_any(gimple_stmt_iterator *gsi, gimple *stmt) {
   if (!name) return;
 
   // Recognize common allocators by name. Extend as needed.
-  bool is_malloc =
+  bool is_alloc =
       (strcmp(name, "malloc") == 0) ||
       (strcmp(name, "calloc") == 0) ||
       (strcmp(name, "realloc") == 0);
 
-  if (!is_malloc) return;
+  if (!is_alloc) return;
 
   // Only if the call assigns to something (p = malloc(...))
   tree lhs = gimple_call_lhs(stmt);
@@ -118,7 +191,7 @@ static void instrument_alloc_if_any(gimple_stmt_iterator *gsi, gimple *stmt) {
 
   unsigned site = g_site_counter++;
   
-  log_site(site,stmt,0);
+  log_mem(site,stmt,name);
 
   // Build decl: void __memlog_alloc(uint32_t, const void*, size_t)
   tree void_t = void_type_node;
@@ -180,7 +253,7 @@ static void instrument_store_if_any(gimple_stmt_iterator *gsi, gimple *stmt) {
   if (!is_mem_store && !is_var_store) return;
 
   unsigned site = g_site_counter++;
-  log_site(site,stmt,1);
+  log_write(site,stmt);
 
   // Runtime hook: void __memlog_store(uint32_t, const void*, size_t, const void*)
   tree void_t = void_type_node;
@@ -295,5 +368,7 @@ int plugin_init(struct plugin_name_args *plugin_info, struct plugin_gcc_version 
   pass_info.pos_op = PASS_POS_INSERT_AFTER;
 
   register_callback(plugin_info->base_name, PLUGIN_PASS_MANAGER_SETUP, NULL, &pass_info);
+  register_callback(plugin_info->base_name, PLUGIN_FINISH_DECL, log_decl, &pass_info);
+
   return 0;
 }

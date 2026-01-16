@@ -29,10 +29,6 @@
       {
         "command": "DAP_command",
         "title": "DAP Command"
-      },
-      {
-        "command": "hi",
-        "title": "SAY HI!!"
       }
     ],
     "viewsContainers": {

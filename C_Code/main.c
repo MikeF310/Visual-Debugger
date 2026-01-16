@@ -55,8 +55,8 @@ int main() {
     int product = compute_product(x, y);
 
     //Struct
-   // person thomas = {21,"Thomas"};
-    //printf("Name: %s, Age: %d \n",thomas.name,thomas.age);
+    person thomas = {21,"Thomas"};
+    printf("Name: %s, Age: %d \n",thomas.name,thomas.age);
     int *a = &x;
 
     int *example_arr = int_array(4);

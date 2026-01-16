@@ -1,12 +1,12 @@
 
-//1) Update the plugin
+(//1) Update the plugin
 g++ -shared -fPIC memlog_plugin.cc -o memlog_plugin.so \
   -I"$(gcc -print-file-name=plugin)/include" \
   -fno-rtti -fno-exceptions -std=gnu++17
 
-//2) Compile runtime plugin code.
+(//2) Compile runtime plugin code.
  gcc -c memlog_runtime.c -o memlog_runtime.o
 
-//3) Compile code with plugin attached
+(//3) Compile code with plugin attached
 gcc -g -O0 -fplugin=./memlog_plugin.so plugin_example.c memlog_runtime.o -o a.out
 

@@ -8,7 +8,11 @@ typedef struct Person {
 
 int main()
 {
-    int x = 10;
+    int y = 5;
+    int x;
+
+    x = 50;
+
     printf("This is a number:%d \n",x);
     int *mal = (int *) malloc(35);
 

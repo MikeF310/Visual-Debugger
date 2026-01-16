@@ -4,18 +4,30 @@
 // Import the module and reference it with the alias vscode in your code below
 const vscode = require('vscode');
 
-const { spawn } = require('child_process');	//only accessing the exec method
-
+const {spawn } = require('child_process');	//only accessing the exec method
+const path = require("path");
 
 /**
  * @param {vscode.ExtensionContext} context
  */
 function activate(context) {
 
+	try {
+        // Your existing code
+        console.log("Extension activated");
+    } catch (err) {
+        console.error("Activation failed:", err);
+    }
 	//List of open folders
 	let folders = vscode.workspace.workspaceFolders;
 	//Grabs the first one/ the currently open folder.
-	let folder_path = folders[0].uri.fsPath;
+	let folder_path = "";
+	if(folders){
+		folder_path = folders[0].uri.fsPath;
+		console.log(folder_path);
+	}else{
+		vscode.window.showErrorMessage("Not in a folder!")
+	}
 
 
 	let gdb = null;
@@ -218,7 +230,6 @@ function activate(context) {
 
 	context.subscriptions.push(gdbCommand)
 	context.subscriptions.push(run_gdb);
-
 }
 
 
