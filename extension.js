@@ -29,18 +29,41 @@ function activate(context) {
 		vscode.window.showErrorMessage("Not in a folder!")
 	}
 
+	//Global until we have the function grabbing and stepping in one function.
+	let func_list = [];
 
+	//The shell containing the gdb process.
 	let gdb = null;
+	//The pseudo terminal.
 	let terminal = null;
+
 	let line = "";
+	
 	let arrayOfLines;
+
+	//next command to be parsed.
 	let parsingCommand = "";
+
+	//writeEmitter.fire(text) writes text to the terminal.
+	let writeEmitter;
+	
+	//Flag variable used to only call "finish" once, and only skip the current function.
+	let skipped = true;
 	
 	//Figure out which command the user called, to flag the parsingCommand variable.
 	function findCommand(command){
-		if(/info * locals/.test(command.trim())){
+		let command_trimmed = command.trim();
+		if(/info * locals/.test(command_trimmed)){
 			parsingCommand = "info locals";		
 		} 
+		else if(/info * functions/.test(command_trimmed)){
+			parsingCommand = "info functions";
+		}
+		else if (command_trimmed == "step" ||command_trimmed == "s"){
+			skipped = true;
+			parsingCommand = "step";
+			
+		}
 		else{
 			console.log("Command failed: ",command.trim());
 		}
@@ -54,6 +77,12 @@ function activate(context) {
 				break;
 			case "frame":
 				captureFrame(data);
+				break;
+			case "info functions":
+				captureFunctions(data);
+				break;
+			case "step":
+				captureStep(data);
 				break;
 
 		}
@@ -71,7 +100,7 @@ function activate(context) {
 		if (file_name != undefined){
 
 				//Create pseudoterminal.
-				const writeEmitter = new vscode.EventEmitter();
+				 writeEmitter = new vscode.EventEmitter();
 
 				let terminalOpenResolve;	//Variable to be resolved after the terminal opens
 				const terminalOpenPromise = new Promise((resolve) => {	//Define a promise function.
@@ -135,6 +164,7 @@ function activate(context) {
 							writeEmitter.fire(arrayOfLines[i] + "\r\n");
 						}
 					}
+					
 					commandManager(string_data);
 					
 				});
@@ -142,7 +172,7 @@ function activate(context) {
 				gdb.on('close', code => {
 					console.log(`GDB exited with code ${code}`);
 
-					writeEmitter.fire(`\nGDB exited with code ${code} \r\n`.trim());
+					writeEmitter.fire(`\nGDB exited with code ${code} \r\n`);
 				});
 
 				gdb.stderr.on('data', data => {
@@ -227,10 +257,58 @@ function activate(context) {
 			
 	}
 
+	function captureFunctions(data){
+		let func_list = [];
+		let localLines = data.split(/\r?\n/);
+		for (let i = 0; i <localLines.length; i++){
+			const var_value = /^(\d+):\s*(\w+)\s+(\w+)\s*\((.*)\)/.exec(localLines[i]);	//["line,func_name","line num","type","function name"]
+			console.log(var_value);
+			if(var_value){
+				func_list.push(var_value[3]);
+			}
+		}
+
+		console.log("Function list-> ",func_list);
+	}
 	function captureFrame(data){
 		//for (let i = 0; )
 	}
+	function captureStep(data){
 
+		let localLines = data.split(/\r?\n/).filter(l => l != "gef➤");
+		
+
+		data = localLines[0].trim(); 
+		
+     	
+		// Check if line starts with number, meaning we're still in current function
+		 
+		if(data.includes("gef➤")){
+			return;
+		}
+		
+
+		 if(/([^\s(]+)\s*\(/.test(data) && skipped){
+			console.log("Step data: ",data);
+			console.log("System function detected! ");
+			gdb.stdin.write("finish \n");
+			const lis = /([^\s(]+)\s*\(/.exec(data);
+			console.log("Lis ",lis);
+			skipped = false;
+		
+		}
+		 if (/^\d+/.test(data)) {
+			console.log("Step data: ",data);
+			console.log("Not a function!")
+        	return;
+    	}
+		else{
+			console.log("Regex failed with data",data);
+		}
+	
+
+
+	}
 	context.subscriptions.push(gdbCommand)
 	context.subscriptions.push(run_gdb);
 }
