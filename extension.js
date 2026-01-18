@@ -50,7 +50,7 @@ function activate(context) {
 	//Flag variable used to only call "finish" once, and only skip the current function.
 	let skipping = false;
 	
-	let ptyResolve;
+	let currLine;
 	//Figure out which command the user called, to flag the parsingCommand variable.
 	function findCommand(command){
 		let command_trimmed = command.trim();
@@ -84,6 +84,7 @@ function activate(context) {
 				captureFunctions(data);
 				break;
 			case "step":
+				
 				captureStep(data);
 				
 				break;
@@ -303,7 +304,8 @@ function activate(context) {
 		if(data.includes("gef➤")){
 			return;
 		}
-	
+			currLine = data.toString().slice(0,2);
+			
 			let func_regex = /^\s*(?:0x[0-9a-fA-F]+\s+in\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*\(/;
 
 			//GDB lines can start with "(address) in (function_name)", or just start with the function name.
@@ -315,6 +317,7 @@ function activate(context) {
 			if(!func_list.includes(lis[1])){
 				skipping = true;
 				gdb.stdin.write("finish \n");	//Step out of library function
+
 				gdb.stdin.write("step \n"); 	//Step past line that called library function.
 				skipping = false;
 				
