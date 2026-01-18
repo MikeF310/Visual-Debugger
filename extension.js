@@ -48,8 +48,9 @@ function activate(context) {
 	let writeEmitter;
 	
 	//Flag variable used to only call "finish" once, and only skip the current function.
-	let skipped = true;
+	let skipping = false;
 	
+	let ptyResolve;
 	//Figure out which command the user called, to flag the parsingCommand variable.
 	function findCommand(command){
 		let command_trimmed = command.trim();
@@ -60,12 +61,13 @@ function activate(context) {
 			parsingCommand = "info functions";
 		}
 		else if (command_trimmed == "step" ||command_trimmed == "s"){
-			skipped = true;
+			skipping = true;
 			parsingCommand = "step";
 			
 		}
 		else{
 			console.log("Command failed: ",command.trim());
+			parsingCommand = "";
 		}
 	}
 
@@ -83,6 +85,9 @@ function activate(context) {
 				break;
 			case "step":
 				captureStep(data);
+				
+				break;
+			default:
 				break;
 
 		}
@@ -122,8 +127,8 @@ function activate(context) {
 						//console.log("Received input: " + data);
 						if (data == '\r' || data == '\n'){		//The user enters "enter"
 							//console.log("Received input: ",line);
-							gdb.stdin.write(line + "\n");
 							findCommand(line);
+							gdb.stdin.write(line + "\n");
 							line = "";
 						}
 						else if(data == "\u007f" || data == "\b" || data == "0x08") {		//If the user enters back space.
@@ -147,25 +152,30 @@ function activate(context) {
 				await terminalOpenPromise;	//Pause function until this promise is resolved by the terminal opening.
 
 				gdb = spawn(`gdb`, [`${file_name}`],{cwd: folder_path});
-				gdb.stdout.on('data', data => {
-					
-					let string_data = data.toString();
-					//console.log("STDOUT: ",string_data);
-					arrayOfLines = string_data.split(/\r?\n/);
-					
-					writeEmitter.fire("\n");
-					
-					for (let i = 0; i < arrayOfLines.length; i++){
 
-						//Don't add a newline when printing the gef->, so the cursor will be on that line.
-						if (i == arrayOfLines.length - 1){
-							writeEmitter.fire(arrayOfLines[i]);
-						} else {
-							writeEmitter.fire(arrayOfLines[i] + "\r\n");
-						}
-					}
-					
+				
+				gdb.stdout.on('data',async data =>  {
+
+					let string_data = data.toString();
+					console.log(string_data);
+
+					arrayOfLines = string_data.split(/\r?\n/);
 					commandManager(string_data);
+					
+
+						//Wont display to the screen if data is meant to be skipped, like library function entering and exiting.
+						writeEmitter.fire("\n");
+						
+						for (let i = 0; i < arrayOfLines.length; i++){
+
+							//Don't add a newline when printing the gef->, so the cursor will be on that line.
+							if (i == arrayOfLines.length - 1){
+								writeEmitter.fire(arrayOfLines[i]);
+							} else {
+								writeEmitter.fire(arrayOfLines[i] + "\r\n");
+							}
+						}
+						
 					
 				});
 
@@ -258,24 +268,31 @@ function activate(context) {
 	}
 
 	function captureFunctions(data){
-		let func_list = [];
+		func_list = [];
 		let localLines = data.split(/\r?\n/);
 		for (let i = 0; i <localLines.length; i++){
-			const var_value = /^(\d+):\s*(\w+)\s+(\w+)\s*\((.*)\)/.exec(localLines[i]);	//["line,func_name","line num","type","function name"]
+			const var_value = /^(\d+):\s*(.+?)\s+(\*?[A-Za-z_][A-Za-z0-9_]*)\s*\((.*)\)/.exec(localLines[i]);	//["line,func_name","line num","type","function name"]
 			console.log(var_value);
 			if(var_value){
+				if(var_value[3].includes("*")){		//Pointers show up in info functions, but not in GBD.
+					var_value[3] = var_value[3].replace("*","");
+				}
 				func_list.push(var_value[3]);
 			}
 		}
 
 		console.log("Function list-> ",func_list);
 	}
+
+
 	function captureFrame(data){
 		//for (let i = 0; )
 	}
+
+	//Skips over library functions by calling "finish" when a library function is caught by regex.
 	function captureStep(data){
 
-		let localLines = data.split(/\r?\n/).filter(l => l != "gef➤");
+		let localLines = data.split(/\r?\n/);
 		
 
 		data = localLines[0].trim(); 
@@ -286,22 +303,25 @@ function activate(context) {
 		if(data.includes("gef➤")){
 			return;
 		}
-		
+	
+			let func_regex = /^\s*(?:0x[0-9a-fA-F]+\s+in\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*\(/;
 
-		 if(/([^\s(]+)\s*\(/.test(data) && skipped){
-			console.log("Step data: ",data);
-			console.log("System function detected! ");
-			gdb.stdin.write("finish \n");
-			const lis = /([^\s(]+)\s*\(/.exec(data);
-			console.log("Lis ",lis);
-			skipped = false;
-		
+			//GDB lines can start with "(address) in (function_name)", or just start with the function name.
+		 if(func_regex.test(data)){
+
+			const lis = func_regex.exec(data);
+			console.log(`Is function ${lis[1]} in list ${func_list}?`)
+
+			if(!func_list.includes(lis[1])){
+				skipping = true;
+				gdb.stdin.write("finish \n");	//Step out of library function
+				gdb.stdin.write("step \n"); 	//Step past line that called library function.
+				skipping = false;
+				
+			}
+			
 		}
-		 if (/^\d+/.test(data)) {
-			console.log("Step data: ",data);
-			console.log("Not a function!")
-        	return;
-    	}
+		
 		else{
 			console.log("Regex failed with data",data);
 		}
