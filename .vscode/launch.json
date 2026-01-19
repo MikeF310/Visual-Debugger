@@ -11,7 +11,7 @@
             "request": "launch",
             "runtimeExecutable": "${execPath}",
             "args": [
-                "--extensionDevelopmentPath=/home/mikef/extension/Visual-Debugger"
+                "--extensionDevelopmentPath=${workspaceFolder}"
             ]
         }
     ]

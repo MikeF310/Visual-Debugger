@@ -49,8 +49,13 @@ function activate(context) {
 	
 	//Flag variable used to only call "finish" once, and only skip the current function.
 	let skipping = false;
-	
+	let display = true;
 	let currLine;
+
+	let pendingFinish = false;
+	let skipLine = null;	
+	let stackframes = [];
+	
 	//Figure out which command the user called, to flag the parsingCommand variable.
 	function findCommand(command){
 		let command_trimmed = command.trim();
@@ -65,6 +70,9 @@ function activate(context) {
 			parsingCommand = "step";
 			
 		}
+		else if (command_trimmed == "backtrace" || command_trimmed == "bt"){
+
+		}
 		else{
 			console.log("Command failed: ",command.trim());
 			parsingCommand = "";
@@ -73,20 +81,37 @@ function activate(context) {
 
 	//Calls the corresponding command parsing function.
 	function commandManager(data){
+		const stoppedLine = extractStoppedLine(data);
+
+		if(pendingFinish && stoppedLine != null){
+			pendingFinish = false;
+
+			if(skipLine != null && stoppedLine == skipLine){
+				gdb.stdin.write("next\n");
+			}
+			console.log(`Stoppedline ${stoppedLine}, skipLine: ${skipLine}`);
+			
+			skipLine = null;
+
+
+			return;
+		}
+		else{
+		}
+		
+
 		switch(parsingCommand){
 			case "info locals":
 				captureLocalVars(data);
 				break;
-			case "frame":
-				captureFrame(data);
+			case "backtrace":
+				captureBackTrace(data);
 				break;
 			case "info functions":
 				captureFunctions(data);
 				break;
 			case "step":
-				
 				captureStep(data);
-				
 				break;
 			default:
 				break;
@@ -96,6 +121,7 @@ function activate(context) {
 		vscode.commands.registerCommand("visualDebugger.start", () => {
   			vscode.window.showInformationMessage("Clicked!");
 		});
+
 	//Runs GDB on the executable that the user defines.
 	const run_gdb = vscode.commands.registerCommand('execute_gdb', async function (){
 		const file_name = await vscode.window.showInputBox({
@@ -152,30 +178,38 @@ function activate(context) {
 
 				await terminalOpenPromise;	//Pause function until this promise is resolved by the terminal opening.
 
+				
 				gdb = spawn(`gdb`, [`${file_name}`],{cwd: folder_path});
 
 				
 				gdb.stdout.on('data',async data =>  {
 
 					let string_data = data.toString();
-					console.log(string_data);
+					console.log("STDOUT", string_data);
 
 					arrayOfLines = string_data.split(/\r?\n/);
+					
 					commandManager(string_data);
 					
-
 						//Wont display to the screen if data is meant to be skipped, like library function entering and exiting.
-						writeEmitter.fire("\n");
-						
-						for (let i = 0; i < arrayOfLines.length; i++){
 
-							//Don't add a newline when printing the gef->, so the cursor will be on that line.
-							if (i == arrayOfLines.length - 1){
-								writeEmitter.fire(arrayOfLines[i]);
-							} else {
-								writeEmitter.fire(arrayOfLines[i] + "\r\n");
+						if(display){
+							writeEmitter.fire("\n");
+						
+							for (let i = 0; i < arrayOfLines.length; i++){
+
+								//Don't add a newline when printing the gef->, so the cursor will be on that line.
+								if (i == arrayOfLines.length - 1){
+									writeEmitter.fire(arrayOfLines[i]);
+								} else {
+									writeEmitter.fire(arrayOfLines[i] + "\r\n");
+								}
 							}
 						}
+						else{
+							console.log("Skipping line: ",string_data);
+						}
+						
 						
 					
 				});
@@ -245,7 +279,7 @@ function activate(context) {
 		*/ 
 	//In Progress.
 	//If we encounter 
-	function captureLocalVars(data){
+	async function captureLocalVars(data){
 		
 		
 		let isStruct = false;
@@ -268,7 +302,7 @@ function activate(context) {
 			
 	}
 
-	function captureFunctions(data){
+	async function captureFunctions(data){
 		func_list = [];
 		let localLines = data.split(/\r?\n/);
 		for (let i = 0; i <localLines.length; i++){
@@ -286,13 +320,27 @@ function activate(context) {
 	}
 
 
-	function captureFrame(data){
-		//for (let i = 0; )
+	function captureBackTrace(data){
+		//fo
+	}
+
+	function extractStoppedLine(text) {
+		const lines = text.split(/\r?\n/);
+
+		// Common case after a stop: "123    some_source_code_here"
+		// We'll take the last such match in this chunk.
+		let found = null;
+		for (const ln of lines) {
+			const m = /^\s*(\d+)\s/.exec(ln);
+			if (m) found = parseInt(m[1], 10);
+		}
+		return found; // number or null
 	}
 
 	//Skips over library functions by calling "finish" when a library function is caught by regex.
-	function captureStep(data){
+	async function captureStep(data){
 
+		console.log("Print")
 		let localLines = data.split(/\r?\n/);
 		
 
@@ -301,11 +349,15 @@ function activate(context) {
      	
 		// Check if line starts with number, meaning we're still in current function
 		 
-		if(data.includes("gef➤")){
+		if(data.includes("gef➤") || data.includes("(gdb)")){
+			console.log("Gdb cursor marker detected, returning!");
 			return;
 		}
-			currLine = data.toString().slice(0,2);
-			
+			const stoppedLine = extractStoppedLine(localLines.join("\n"));
+
+			if (stoppedLine != null){
+				currLine = stoppedLine;
+			}			
 			let func_regex = /^\s*(?:0x[0-9a-fA-F]+\s+in\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*\(/;
 
 			//GDB lines can start with "(address) in (function_name)", or just start with the function name.
@@ -315,12 +367,11 @@ function activate(context) {
 			console.log(`Is function ${lis[1]} in list ${func_list}?`)
 
 			if(!func_list.includes(lis[1])){
-				skipping = true;
+				display = false;
+				skipLine = currLine;
+				pendingFinish = true;
+				console.log(`SkipLine: ${skipLine}`);
 				gdb.stdin.write("finish \n");	//Step out of library function
-
-				gdb.stdin.write("step \n"); 	//Step past line that called library function.
-				skipping = false;
-				
 			}
 			
 		}
