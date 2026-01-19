@@ -50,7 +50,7 @@ int main() {
 
     int *m = (int *) malloc(31);
 
-    m = &y;
+    *m= y;
     //int sum = compute_sum(x, y);
     int product = compute_product(x, y);
 
@@ -65,5 +65,6 @@ int main() {
 
     header_print();
     free(example_arr);
+    free(m);
     return 0;
 }
