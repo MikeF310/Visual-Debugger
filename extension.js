@@ -1,5 +1,8 @@
 // The module 'vscode' contains the VS Code extensibility API
 
+import { createVerify } from 'crypto';
+import { getSystemErrorMap } from 'util';
+
 
 // Import the module and reference it with the alias vscode in your code below
 const vscode = require('vscode');
@@ -55,7 +58,96 @@ function activate(context) {
 	let pendingFinish = false;
 	let skipLine = null;	
 	let stackframes = [];
-	
+
+	const PROMPT = "VDBUG> ";
+
+	//Factory fucnction, creates a 
+	function makeGDBInterface({writeEmitter, onText}){
+		/*
+		The "currentCommand" Object has: 
+		- a display boolean for whether or not to display the output of the current command
+		- Buffer is a string that holds GDB output from the current command, until its done. 
+			It will be printed when the next command is detected
+		- Resolve is a field that can be called to resume function execution, mostly used in commands.
+		*/
+		let currentCommand = null;
+		let carry = "";
+
+		
+		//Prints command output to the psuedo terminal that the user can use.
+		function print(data){
+			const lines = data.split(/\r\n/);
+			writeEmitter.fire("\n");
+			for (let i = 0; i < lines.length; i++){
+
+				if (i == arrayOfLines.length - 1){
+					writeEmitter.fire(arrayOfLines[i]);
+				} 
+				else {
+					writeEmitter.fire(arrayOfLines[i] + "\r\n");
+				}
+			}
+			
+		}	
+		function processText(chunk){
+			const text = chunk.toString();
+
+			//Pass command to commandManager();
+			onText?.(chunk);		//
+			
+			if(!this.currentCommand){
+				print(text);
+				return;
+			}
+
+			//Add output to buffer
+			currentCommand.buffer += text;
+
+			carry += text;
+			let idx;
+
+			while(idx = carry.indexOf("\n")){
+				const line = carry.slice(0, idx + 1);
+				carry = carry.slice(idx + 1);
+
+				if(line.includes(PROMPT)){	//If we see the prompt, the command has finished and we're clear to print it to the terminal.
+
+					if(currentCommand.display){
+						print(currentCommand.buffer);
+					}
+
+					const commandResolve = currentCommand.resolve;
+					currentCommand = null;	//Set command to null after 
+					commandResolve?.();		//
+				}
+			}
+		}
+		
+		//Function that sends commands and creates a current command object. 
+		//currentCommand objects with a resolve field that can be called to resume function execution.
+		async function send(gdb, command, display = true){
+			if (!gdb){
+				console.log("GDB isnt running");
+				vscode.window.showErrorMessage("Can't send command while GDB isn't running!");
+			}
+			if(currentCommand){
+				console.log("Previous GDB command hasn't finished yet");
+				vscode.window.showErrorMessage("Previous GDB command hasn't finished yet");
+			}
+			//Allow for function execution to resume.
+			return new Promise((resolve) => {
+				currentCommand = {display, buffer: "", resolve};
+				gdb.stdin.write(command + "\n");
+			});
+
+
+		}
+
+		//Returns 
+		return {processText,send};
+
+
+	}
 	//Figure out which command the user called, to flag the parsingCommand variable.
 	function findCommand(command){
 		let command_trimmed = command.trim();
@@ -85,6 +177,7 @@ function activate(context) {
 
 		if(pendingFinish && stoppedLine != null){
 			pendingFinish = false;
+			display = true;
 
 			if(skipLine != null && stoppedLine == skipLine){
 				gdb.stdin.write("next\n");
@@ -117,6 +210,14 @@ function activate(context) {
 				break;
 
 		}
+	}
+	//Silent means the command will not be shown to the user.
+	async function sendCommand(command,is_Silent){
+		
+		return new Promise ((resolve)=> {
+
+		})
+
 	}
 		vscode.commands.registerCommand("visualDebugger.start", () => {
   			vscode.window.showInformationMessage("Clicked!");
@@ -155,6 +256,7 @@ function activate(context) {
 						if (data == '\r' || data == '\n'){		//The user enters "enter"
 							//console.log("Received input: ",line);
 							findCommand(line);
+
 							gdb.stdin.write(line + "\n");
 							line = "";
 						}
@@ -210,8 +312,6 @@ function activate(context) {
 							console.log("Skipping line: ",string_data);
 						}
 						
-						
-					
 				});
 
 				gdb.on('close', code => {
