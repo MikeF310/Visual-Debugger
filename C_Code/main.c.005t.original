@@ -1,0 +1,145 @@
+
+;; Function __bswap_16 (null)
+;; enabled by -tree-original
+
+
+{
+  return (__uint16_t) __builtin_bswap16 ((int) __bsx);
+}
+
+
+;; Function __bswap_32 (null)
+;; enabled by -tree-original
+
+
+{
+  return (__uint32_t) __builtin_bswap32 (__bsx);
+}
+
+
+;; Function __bswap_64 (null)
+;; enabled by -tree-original
+
+
+{
+  return (__uint64_t) __builtin_bswap64 (__bsx);
+}
+
+
+;; Function __uint16_identity (null)
+;; enabled by -tree-original
+
+
+{
+  return __x;
+}
+
+
+;; Function __uint32_identity (null)
+;; enabled by -tree-original
+
+
+{
+  return __x;
+}
+
+
+;; Function __uint64_identity (null)
+;; enabled by -tree-original
+
+
+{
+  return __x;
+}
+
+
+;; Function int_array (null)
+;; enabled by -tree-original
+
+
+{
+  int ex[9] = {1, 2, 3, 4, 5, 6, 7, 8};
+  int * dynamic_array = (int *) malloc ((long unsigned int) size * 4);
+
+    int ex[9] = {1, 2, 3, 4, 5, 6, 7, 8};
+    int * dynamic_array = (int *) malloc ((long unsigned int) size * 4);
+  {
+    int i = 0;
+
+        int i = 0;
+    goto <D.3718>;
+    <D.3717>:;
+    *(dynamic_array + (sizetype) ((long unsigned int) i * 4)) = i;
+    i++ ;
+    <D.3718>:;
+    if (i <= 3) goto <D.3717>; else goto <D.3715>;
+    <D.3715>:;
+  }
+  return dynamic_array;
+}
+
+
+;; Function compute_sum (null)
+;; enabled by -tree-original
+
+
+{
+  int sum = a + b;
+
+    int sum = a + b;
+  return sum;
+}
+
+
+;; Function compute_product (null)
+;; enabled by -tree-original
+
+
+{
+  int product = compute_sum (a, b) * b;
+
+    int product = compute_sum (a, b) * b;
+  return product;
+}
+
+
+;; Function print_result (null)
+;; enabled by -tree-original
+
+
+{
+  printf ((const char * restrict) "Sum: %d\n", sum);
+  printf ((const char * restrict) "Product: %d\n", product);
+}
+
+
+;; Function main (null)
+;; enabled by -tree-original
+
+
+{
+  int x = 6;
+  int y = 10;
+  int * m = (int *) malloc (31);
+  int product = compute_product (x, y);
+  struct person thomas = {.age=21, .name="Thomas"};
+  int * a = &x;
+  int * example_arr = int_array (4);
+  int z = x + y;
+
+    int x = 6;
+    int y = 10;
+    int * m = (int *) malloc (31);
+  m = &y;
+    int product = compute_product (x, y);
+    struct person thomas = {.age=21, .name="Thomas"};
+  printf ((const char * restrict) "Name: %s, Age: %d \n", (char *) &thomas.name, thomas.age);
+    int * a = &x;
+    int * example_arr = int_array (4);
+    int z = x + y;
+  header_print ();
+  free ((void *) example_arr);
+  return 0;
+}
+return 0;
+

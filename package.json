@@ -29,6 +29,14 @@
       {
         "command": "DAP_command",
         "title": "DAP Command"
+      },
+      {
+        "command": "visualdebugger.buildWithMemlog",
+        "title": "VisualDebugger: Build (compile-time memory analysis)"
+      },
+      {
+        "command": "visualdebugger.openLatestLogFolder",
+        "title": "VisualDebugger: Open latest log folder"
       }
     ],
     "viewsContainers": {
@@ -56,6 +64,7 @@
     "test": "vscode-test"
   },
   "devDependencies": {
+    "vscode": "^1.1.37",
     "@types/mocha": "^10.0.10",
     "@types/node": "^22.19.3",
     "@types/vscode": "^1.107.0",

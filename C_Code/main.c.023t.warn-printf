@@ -1,0 +1,245 @@
+
+;; Function int_array (int_array, funcdef_no=6, decl_uid=3710, cgraph_uid=7, symbol_order=6)
+
+;; 2 loops found
+;;
+;; Loop 0
+;;  header 0, latch 1
+;;  depth 0, outer -1
+;;  nodes: 0 1 2 3 4 5 6
+;;
+;; Loop 1
+;;  header 4, latch 3
+;;  depth 1, outer 0
+;;  nodes: 4 3
+;; 2 succs { 4 }
+;; 3 succs { 4 }
+;; 4 succs { 3 5 }
+;; 5 succs { 6 }
+;; 6 succs { 1 }
+int * int_array (int size)
+{
+  int i;
+  int * dynamic_array;
+  int ex[9];
+  int * D.3744;
+  long unsigned int _1;
+  long unsigned int _2;
+  long unsigned int _3;
+  long unsigned int _4;
+  int * _5;
+  int * _22;
+
+  <bb 2> :
+  ex = {};
+  ex[0] = 1;
+  ex[1] = 2;
+  ex[2] = 3;
+  ex[3] = 4;
+  ex[4] = 5;
+  ex[5] = 6;
+  ex[6] = 7;
+  ex[7] = 8;
+  _1 = (long unsigned int) size_18(D);
+  _2 = _1 * 4;
+  dynamic_array_20 = malloc (_2);
+  i_21 = 0;
+  goto <bb 4>; [INV]
+
+  <bb 3> :
+  _3 = (long unsigned int) i_6;
+  _4 = _3 * 4;
+  _5 = dynamic_array_20 + _4;
+  *_5 = i_6;
+  i_25 = i_6 + 1;
+
+  <bb 4> :
+  # i_6 = PHI <i_21(2), i_25(3)>
+  if (i_6 <= 3)
+    goto <bb 3>; [INV]
+  else
+    goto <bb 5>; [INV]
+
+  <bb 5> :
+  _22 = dynamic_array_20;
+  ex ={v} {CLOBBER(eol)};
+
+  <bb 6> :
+<L4>:
+  return _22;
+
+}
+
+
+
+;; Function compute_sum (compute_sum, funcdef_no=7, decl_uid=3721, cgraph_uid=8, symbol_order=7)
+
+;; 1 loops found
+;;
+;; Loop 0
+;;  header 0, latch 1
+;;  depth 0, outer -1
+;;  nodes: 0 1 2 3
+;; 2 succs { 3 }
+;; 3 succs { 1 }
+int compute_sum (int a, int b)
+{
+  int sum;
+  int D.3747;
+  int _4;
+
+  <bb 2> :
+  sum_3 = a_1(D) + b_2(D);
+  _4 = sum_3;
+
+  <bb 3> :
+<L0>:
+  return _4;
+
+}
+
+
+
+;; Function compute_product (compute_product, funcdef_no=8, decl_uid=3726, cgraph_uid=9, symbol_order=8)
+
+;; 1 loops found
+;;
+;; Loop 0
+;;  header 0, latch 1
+;;  depth 0, outer -1
+;;  nodes: 0 1 2 3
+;; 2 succs { 3 }
+;; 3 succs { 1 }
+int compute_product (int a, int b)
+{
+  int product;
+  int D.3749;
+  int _1;
+  int _7;
+
+  <bb 2> :
+  _1 = compute_sum (a_3(D), b_4(D));
+  product_6 = b_4(D) * _1;
+  _7 = product_6;
+
+  <bb 3> :
+<L0>:
+  return _7;
+
+}
+
+
+
+;; Function print_result (print_result, funcdef_no=9, decl_uid=3731, cgraph_uid=10, symbol_order=9)
+
+;; 1 loops found
+;;
+;; Loop 0
+;;  header 0, latch 1
+;;  depth 0, outer -1
+;;  nodes: 0 1 2
+;; 2 succs { 1 }
+main.c:41: printf: objsize = 9223372036854775807, fmtstr = "Sum: %d
+"
+  Directive 1 at offset 0: "Sum: ", length = 5
+    Result: 5, 5, 5, 5 (5, 5, 5, 5)
+  Directive 2 at offset 5: "%d"
+    Result: 1, 1, 11, 11 (6, 6, 16, 16)
+  Directive 3 at offset 7: "
+", length = 1
+    Result: 1, 1, 1, 1 (7, 7, 17, 17)
+  Directive 4 at offset 8: "", length = 1
+main.c:42: printf: objsize = 9223372036854775807, fmtstr = "Product: %d
+"
+  Directive 1 at offset 0: "Product: ", length = 9
+    Result: 9, 9, 9, 9 (9, 9, 9, 9)
+  Directive 2 at offset 9: "%d"
+    Result: 1, 1, 11, 11 (10, 10, 20, 20)
+  Directive 3 at offset 11: "
+", length = 1
+    Result: 1, 1, 1, 1 (11, 11, 21, 21)
+  Directive 4 at offset 12: "", length = 1
+void print_result (int sum, int product)
+{
+  <bb 2> :
+  printf ("Sum: %d\n", sum_2(D));
+  printf ("Product: %d\n", product_4(D));
+  return;
+
+}
+
+
+
+;; Function main (main, funcdef_no=10, decl_uid=3733, cgraph_uid=11, symbol_order=10)
+
+;; 1 loops found
+;;
+;; Loop 0
+;;  header 0, latch 1
+;;  depth 0, outer -1
+;;  nodes: 0 1 2 3
+;; 2 succs { 3 }
+;; 3 succs { 1 }
+main.c:59: printf: objsize = 9223372036854775807, fmtstr = "Name: %s, Age: %d 
+"
+  Directive 1 at offset 0: "Name: ", length = 6
+    Result: 6, 6, 6, 6 (6, 6, 6, 6)
+  Directive 2 at offset 6: "%s"
+    Result: 0, 49, 49, 9223372036854775807 (6, 55, 55, -9223372036854775803)
+  Directive 3 at offset 8: ", Age: ", length = 7
+    Result: 7, 7, 7, 7 (13, 62, 62, -9223372036854775796)
+  Directive 4 at offset 15: "%d"
+    Result: 1, 1, 11, 11 (14, 63, 73, -9223372036854775785)
+  Directive 5 at offset 17: " 
+", length = 2
+    Result: 2, 2, 2, 2 (16, 65, 75, -9223372036854775783)
+  Directive 6 at offset 19: "", length = 1
+int main ()
+{
+  int z;
+  int * example_arr;
+  int * a;
+  struct person thomas;
+  int product;
+  int * m;
+  int y;
+  int x;
+  int D.3751;
+  int y.0_1;
+  int x.1_2;
+  int _3;
+  int x.2_4;
+  int y.3_5;
+  int _23;
+
+  <bb 2> :
+  x = 6;
+  y = 10;
+  m_10 = malloc (31);
+  m_11 = &y;
+  y.0_1 = y;
+  x.1_2 = x;
+  product_13 = compute_product (x.1_2, y.0_1);
+  thomas.age = 21;
+  thomas.name = "Thomas";
+  _3 = thomas.age;
+  printf ("Name: %s, Age: %d \n", &thomas.name, _3);
+  a_17 = &x;
+  example_arr_19 = int_array (4);
+  x.2_4 = x;
+  y.3_5 = y;
+  z_20 = x.2_4 + y.3_5;
+  header_print ();
+  free (example_arr_19);
+  _23 = 0;
+  x ={v} {CLOBBER(eol)};
+  y ={v} {CLOBBER(eol)};
+  thomas ={v} {CLOBBER(eol)};
+
+  <bb 3> :
+<L1>:
+  return _23;
+
+}
+
+
