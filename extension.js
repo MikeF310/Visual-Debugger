@@ -1,7 +1,5 @@
 // The module 'vscode' contains the VS Code extensibility API
 
-import { createVerify } from 'crypto';
-import { getSystemErrorMap } from 'util';
 
 
 // Import the module and reference it with the alias vscode in your code below
@@ -61,7 +59,9 @@ function activate(context) {
 
 	const PROMPT = "VDBUG> ";
 
-	//Factory fucnction, creates a 
+	//GDB object	
+	let gdb_interface = null;
+	
 	function makeGDBInterface({writeEmitter, onText}){
 		/*
 		The "currentCommand" Object has: 
@@ -76,9 +76,9 @@ function activate(context) {
 		
 		//Prints command output to the psuedo terminal that the user can use.
 		function print(data){
-			const lines = data.split(/\r\n/);
+			const arrayOfLines = data.split(/\r\n/);
 			writeEmitter.fire("\n");
-			for (let i = 0; i < lines.length; i++){
+			for (let i = 0; i < arrayOfLines.length; i++){
 
 				if (i == arrayOfLines.length - 1){
 					writeEmitter.fire(arrayOfLines[i]);
@@ -211,14 +211,7 @@ function activate(context) {
 
 		}
 	}
-	//Silent means the command will not be shown to the user.
-	async function sendCommand(command,is_Silent){
-		
-		return new Promise ((resolve)=> {
-
-		})
-
-	}
+	
 		vscode.commands.registerCommand("visualDebugger.start", () => {
   			vscode.window.showInformationMessage("Clicked!");
 		});
@@ -232,13 +225,18 @@ function activate(context) {
 
 		if (file_name != undefined){
 
-				//Create pseudoterminal.
-				 writeEmitter = new vscode.EventEmitter();
 
-				let terminalOpenResolve;	//Variable to be resolved after the terminal opens
-				const terminalOpenPromise = new Promise((resolve) => {	//Define a promise function.
-					terminalOpenResolve = resolve;
-				});
+
+				//Create pseudoterminal.
+			writeEmitter = new vscode.EventEmitter();
+
+			gdb_interface = makeGDBInterface({writeEmitter,onText:(text) => commandManager(text)});
+
+
+			let terminalOpenResolve;	//Variable to be resolved after the terminal opens
+			const terminalOpenPromise = new Promise((resolve) => {	//Define a promise function.
+				terminalOpenResolve = resolve;
+			});
 				const pseudoTerminal = {
 					onDidWrite: writeEmitter.event,
 					open: () => {
@@ -257,6 +255,7 @@ function activate(context) {
 							//console.log("Received input: ",line);
 							findCommand(line);
 
+							
 							gdb.stdin.write(line + "\n");
 							line = "";
 						}
@@ -286,57 +285,20 @@ function activate(context) {
 				
 				gdb.stdout.on('data',async data =>  {
 
-					let string_data = data.toString();
-					console.log("STDOUT", string_data);
-
-					arrayOfLines = string_data.split(/\r?\n/);
-					
-					commandManager(string_data);
-					
-						//Wont display to the screen if data is meant to be skipped, like library function entering and exiting.
-
-						if(display){
-							writeEmitter.fire("\n");
-						
-							for (let i = 0; i < arrayOfLines.length; i++){
-
-								//Don't add a newline when printing the gef->, so the cursor will be on that line.
-								if (i == arrayOfLines.length - 1){
-									writeEmitter.fire(arrayOfLines[i]);
-								} else {
-									writeEmitter.fire(arrayOfLines[i] + "\r\n");
-								}
-							}
-						}
-						else{
-							console.log("Skipping line: ",string_data);
-						}
-						
+					gdb_interface.processText(data);
 				});
 
 				gdb.on('close', code => {
 					console.log(`GDB exited with code ${code}`);
 
-					writeEmitter.fire(`\nGDB exited with code ${code} \r\n`);
+					writeEmitter.fire(`\r\nGDB exited with code ${code} \r\n`);
 				});
 
 				gdb.stderr.on('data', data => {
 				
-					let string_data = data.toString();
-					//console.log("STDOUT: ",string_data);
-					arrayOfLines = string_data.split(/\r?\n/);
-					
-					writeEmitter.fire("\n");
-					for (let i = 0; i < arrayOfLines.length; i++){
-
-						//Don't add a newline when printing the gef->, so the cursor will be on that line.
-						if (i == arrayOfLines.length - 1){
-							writeEmitter.fire(arrayOfLines[i]);
-						} else {
-							writeEmitter.fire(arrayOfLines[i] + "\r\n");
-						}
-					}
+					gdb_interface.processText(data);
 				});		 
+
 		}
 	});
 
@@ -421,7 +383,7 @@ function activate(context) {
 
 
 	function captureBackTrace(data){
-		//fo
+		//foo
 	}
 
 	function extractStoppedLine(text) {
@@ -475,12 +437,10 @@ function activate(context) {
 			}
 			
 		}
-		
+
 		else{
 			console.log("Regex failed with data",data);
 		}
-	
-
 
 	}
 	context.subscriptions.push(gdbCommand)
