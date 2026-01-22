@@ -40,7 +40,7 @@ function activate(context) {
 
 	let line = "";
 	
-	let arrayOfLines;
+
 
 	//next command to be parsed.
 	let parsingCommand = "";
@@ -76,7 +76,7 @@ function activate(context) {
 		
 		//Prints command output to the psuedo terminal that the user can use.
 		function print(data){
-			const arrayOfLines = data.split(/\r\n/);
+			const arrayOfLines = data.split(/\r?\n/);
 			writeEmitter.fire("\n");
 			for (let i = 0; i < arrayOfLines.length; i++){
 
@@ -93,9 +93,9 @@ function activate(context) {
 			const text = chunk.toString();
 
 			//Pass command to commandManager();
-			onText?.(chunk);		//
+			onText?.(text);		//
 			
-			if(!this.currentCommand){
+			if(!currentCommand){
 				print(text);
 				return;
 			}
@@ -106,11 +106,12 @@ function activate(context) {
 			carry += text;
 			let idx;
 
-			while(idx = carry.indexOf("\n")){
+			while( (idx = carry.indexOf("\n")) !== -1){
+				
 				const line = carry.slice(0, idx + 1);
 				carry = carry.slice(idx + 1);
 
-				if(line.includes(PROMPT)){	//If we see the prompt, the command has finished and we're clear to print it to the terminal.
+				if(line.includes(PROMPT) || line.includes("gdb")){	//If we see the prompt, the command has finished and we're clear to print it to the terminal.
 
 					if(currentCommand.display){
 						print(currentCommand.buffer);
@@ -125,26 +126,27 @@ function activate(context) {
 		
 		//Function that sends commands and creates a current command object. 
 		//currentCommand objects with a resolve field that can be called to resume function execution.
-		async function send(gdb, command, display = true){
+		async function sendCommand(gdb, command, display = true){
 			if (!gdb){
-				console.log("GDB isnt running");
 				vscode.window.showErrorMessage("Can't send command while GDB isn't running!");
+				throw new Error("GDB is not running.");
 			}
 			if(currentCommand){
-				console.log("Previous GDB command hasn't finished yet");
+
 				vscode.window.showErrorMessage("Previous GDB command hasn't finished yet");
+				throw new Error("Previous command hasn't finished yet.");
 			}
 			//Allow for function execution to resume.
 			return new Promise((resolve) => {
 				currentCommand = {display, buffer: "", resolve};
-				gdb.stdin.write(command + "\n");
+				gdb.stdin.write(command.trimEnd() + "\n");
 			});
 
 
 		}
 
 		//Returns 
-		return {processText,send};
+		return {processText,sendCommand};
 
 
 	}
@@ -173,6 +175,9 @@ function activate(context) {
 
 	//Calls the corresponding command parsing function.
 	function commandManager(data){
+		if (typeof data != "string"){
+			return;
+		}
 		const stoppedLine = extractStoppedLine(data);
 
 		if(pendingFinish && stoppedLine != null){
@@ -185,14 +190,10 @@ function activate(context) {
 			console.log(`Stoppedline ${stoppedLine}, skipLine: ${skipLine}`);
 			
 			skipLine = null;
-
-
 			return;
 		}
 		else{
 		}
-		
-
 		switch(parsingCommand){
 			case "info locals":
 				captureLocalVars(data);
@@ -225,8 +226,6 @@ function activate(context) {
 
 		if (file_name != undefined){
 
-
-
 				//Create pseudoterminal.
 			writeEmitter = new vscode.EventEmitter();
 
@@ -249,14 +248,24 @@ function activate(context) {
 						console.log("Terminal closing!");
 						gdb.kill();
 					},
-					handleInput: (data) => {
+					handleInput: async (data) => {
 						//console.log("Received input: " + data);
 						if (data == '\r' || data == '\n'){		//The user enters "enter"
-							//console.log("Received input: ",line);
-							findCommand(line);
-
+							const user_cmd = line;
+							line = "";
 							
-							gdb.stdin.write(line + "\n");
+							writeEmitter.fire("\r\n");
+
+							if(!gdb || !gdb_interface){
+								return;	//Ignore user input if the GDB process or gdb_interface object aren't active.
+							}	
+							findCommand(user_cmd);
+							try {
+								await gdb_interface.sendCommand(gdb, user_cmd, true);
+							} catch (e) {
+								vscode.window.showWarningMessage(String(e.message ?? e));
+							}
+							
 							line = "";
 						}
 						else if(data == "\u007f" || data == "\b" || data == "0x08") {		//If the user enters back space.
@@ -280,7 +289,7 @@ function activate(context) {
 				await terminalOpenPromise;	//Pause function until this promise is resolved by the terminal opening.
 
 				
-				gdb = spawn(`gdb`, [`${file_name}`],{cwd: folder_path});
+				gdb = spawn(`gdb`, [`--quiet`,`${file_name}`],{cwd: folder_path});
 
 				
 				gdb.stdout.on('data',async data =>  {
@@ -299,6 +308,13 @@ function activate(context) {
 					gdb_interface.processText(data);
 				});		 
 
+				console.log("Trying to pass commands");
+				await gdb_interface.sendCommand(gdb, "set pagination off", false);
+				console.log("First Command attempted!")
+				await gdb_interface.sendCommand(gdb, "set confirm off", false);
+				console.log("Second Command attempted!")
+
+				await gdb_interface.sendCommand(gdb, `set prompt ${PROMPT}`, false);
 		}
 	});
 
@@ -311,7 +327,8 @@ function activate(context) {
 			value:"info locals"
 			});
 
-			gdb.stdin.write(command + '\n');
+			findCommand(command);
+			await gdb_interface.sendCommand(gdb,command,true);
 		}
 		else{
 			vscode.window.showErrorMessage("GDB is not running");
@@ -387,6 +404,10 @@ function activate(context) {
 	}
 
 	function extractStoppedLine(text) {
+		if(typeof text !== "string"){
+			return null;
+		}
+
 		const lines = text.split(/\r?\n/);
 
 		// Common case after a stop: "123    some_source_code_here"
@@ -402,7 +423,7 @@ function activate(context) {
 	//Skips over library functions by calling "finish" when a library function is caught by regex.
 	async function captureStep(data){
 
-		console.log("Print")
+		
 		let localLines = data.split(/\r?\n/);
 		
 
@@ -429,11 +450,11 @@ function activate(context) {
 			console.log(`Is function ${lis[1]} in list ${func_list}?`)
 
 			if(!func_list.includes(lis[1])){
-				display = false;
 				skipLine = currLine;
 				pendingFinish = true;
-				console.log(`SkipLine: ${skipLine}`);
-				gdb.stdin.write("finish \n");	//Step out of library function
+				//console.log(`SkipLine: ${skipLine}`);
+
+				await gdb_interface.sendCommand(gdb,"finish",false);
 			}
 			
 		}
