@@ -1,7 +1,5 @@
 // The module 'vscode' contains the VS Code extensibility API
 
-
-
 // Import the module and reference it with the alias vscode in your code below
 const vscode = require('vscode');
 
@@ -40,29 +38,31 @@ function activate(context) {
 
 	let line = "";
 	
-
-
 	//next command to be parsed.
 	let parsingCommand = "";
 
 	//writeEmitter.fire(text) writes text to the terminal.
 	let writeEmitter;
 	
-	//Flag variable used to only call "finish" once, and only skip the current function.
-	let skipping = false;
-	let display = true;
+	
 	let currLine;
 
 	let pendingFinish = false;
 	let skipLine = null;	
+	let cmdQueue = [];
+	
 	let stackframes = [];
 
+	let pendingSkipDecision = false;
+	let finishFromLine = null;
+
+	let stack_site = 0;
 	const PROMPT = "VDBUG> ";
 
-	//GDB object	
+	//GDB object	le
 	let gdb_interface = null;
 	
-	function makeGDBInterface({writeEmitter, onText}){
+	function makeGDBInterface({writeEmitter, onText, onCommandDone}){
 		/*
 		The "currentCommand" Object has: 
 		- a display boolean for whether or not to display the output of the current command
@@ -73,11 +73,10 @@ function activate(context) {
 		let currentCommand = null;
 		let carry = "";
 
-		
-		//Prints command output to the psuedo terminal that the user can use.
+		//Prints command output to the psuedo terminal that the user can see.
 		function print(data){
 			const arrayOfLines = data.split(/\r?\n/);
-			writeEmitter.fire("\n");
+			//writeEmitter.fire("\n");
 			for (let i = 0; i < arrayOfLines.length; i++){
 
 				if (i == arrayOfLines.length - 1){
@@ -104,24 +103,42 @@ function activate(context) {
 			currentCommand.buffer += text;
 
 			carry += text;
-			let idx;
 
-			while( (idx = carry.indexOf("\n")) !== -1){
-				
-				const line = carry.slice(0, idx + 1);
-				carry = carry.slice(idx + 1);
+			const promptRe = /(VDBUG>\s*|\(gdb\)\s*|gef➤\s*)$/;
+			//If we detect prompt end, we can say that the current command has resolved/finished.
+			if (promptRe.test(carry)) {
 
-				if(line.includes(PROMPT) || line.includes("gdb")){	//If we see the prompt, the command has finished and we're clear to print it to the terminal.
-
-					if(currentCommand.display){
-						print(currentCommand.buffer);
-					}
-
-					const commandResolve = currentCommand.resolve;
-					currentCommand = null;	//Set command to null after 
-					commandResolve?.();		//
+				const finished = currentCommand;	//The finished comman
+				if (finished.display) {
+					print(finished.buffer);
 				}
-			}
+				else {
+					//console.log("Skipping line: ",currentCommand.buffer + " line end");
+				}
+
+				currentCommand = null;
+				carry = ""; // reset so we don’t keep matching old prompt
+				
+				
+				finished.resolve?.();
+
+				onCommandDone?.(finished);	//
+
+				if(cmdQueue.length > 0){
+					const {cmd, display} = cmdQueue.shift();	//Remove last element and assign it to LHS
+
+					//setImmediate executes a piece of code asychronously, but as soon as possible (executed in next iteration of the event loop)
+					//In order to execute command as soon as the current one is finished. This is used to send automatic finishes after stepping into a library functions or automatic backtraces after a stop point.
+					
+					setImmediate( () => {
+						if(gdb){
+							gdb_interface.sendCommand(gdb,cmd,display);
+						}
+					})
+					
+				}
+				return;
+ 			}
 		}
 		
 		//Function that sends commands and creates a current command object. 
@@ -138,15 +155,21 @@ function activate(context) {
 			}
 			//Allow for function execution to resume.
 			return new Promise((resolve) => {
-				currentCommand = {display, buffer: "", resolve};
+				currentCommand = {display, buffer: "", resolve,command};
 				gdb.stdin.write(command.trimEnd() + "\n");
+				//console.log("Command written-> ", command);
 			});
-
-
 		}
 
+		function hideCurrent() {
+			if (currentCommand) currentCommand.display = false;
+		}
+
+		function showCurrent(){
+			if(currentCommand) currentCommand.display = true;
+		}
 		//Returns 
-		return {processText,sendCommand};
+		return {processText,sendCommand,hideCurrent,showCurrent};
 
 
 	}
@@ -160,36 +183,40 @@ function activate(context) {
 			parsingCommand = "info functions";
 		}
 		else if (command_trimmed == "step" ||command_trimmed == "s"){
-			skipping = true;
 			parsingCommand = "step";
 			
 		}
 		else if (command_trimmed == "backtrace" || command_trimmed == "bt"){
-
+			parsingCommand = "backtrace"
 		}
 		else{
-			console.log("Command failed: ",command.trim());
+			//console.log("Command failed: ",command.trim());
 			parsingCommand = "";
 		}
 	}
 
 	//Calls the corresponding command parsing function.
-	function commandManager(data){
+	async function commandManager(data){
 		if (typeof data != "string"){
 			return;
 		}
+		 
 		const stoppedLine = extractStoppedLine(data);
 
-		if(pendingFinish && stoppedLine != null){
-			pendingFinish = false;
-			display = true;
+		if(pendingSkipDecision && stoppedLine != null){
+			pendingSkipDecision = false;
 
-			if(skipLine != null && stoppedLine == skipLine){
-				gdb.stdin.write("next\n");
+			if(finishFromLine != null && stoppedLine == finishFromLine){
+				cmdQueue.push({cmd: "next", display: true});
+
 			}
+			else{
+				gdb_interface.showCurrent();
+			}
+			
 			console.log(`Stoppedline ${stoppedLine}, skipLine: ${skipLine}`);
 			
-			skipLine = null;
+			finishFromLine = null;
 			return;
 		}
 		else{
@@ -207,6 +234,8 @@ function activate(context) {
 			case "step":
 				captureStep(data);
 				break;
+			case "reveal":
+				console.log("Revealing: ",stackframes);
 			default:
 				break;
 
@@ -229,7 +258,26 @@ function activate(context) {
 				//Create pseudoterminal.
 			writeEmitter = new vscode.EventEmitter();
 
-			gdb_interface = makeGDBInterface({writeEmitter,onText:(text) => commandManager(text)});
+			gdb_interface = makeGDBInterface({writeEmitter,onText:(text) => commandManager(text), 
+				onCommandDone: async (finished) => {														//Backtrace will be called after the user runs 
+					const last_cmd = (finished?.command ?? "").trim();
+					//const tag = finished.tag ?? "user";
+					parsingCommand = "";
+
+					if (last_cmd == "backtrace" || last_cmd == "bt"){
+						captureBackTrace(finished.buffer);
+						return;
+					}
+					if ((last_cmd == "s" || last_cmd === "step" || last_cmd == "continue"
+						|| last_cmd == "c" || last_cmd == "run" || last_cmd == "r"
+					)){
+						//parsingCommand = "backtrace";
+						cmdQueue.push({cmd: "backtrace",display:false});
+						
+						
+					}
+				}
+			});
 
 
 			let terminalOpenResolve;	//Variable to be resolved after the terminal opens
@@ -261,7 +309,7 @@ function activate(context) {
 							}	
 							findCommand(user_cmd);
 							try {
-								await gdb_interface.sendCommand(gdb, user_cmd, true);
+								await gdb_interface.sendCommand(gdb, user_cmd, true,);
 							} catch (e) {
 								vscode.window.showWarningMessage(String(e.message ?? e));
 							}
@@ -269,8 +317,11 @@ function activate(context) {
 							line = "";
 						}
 						else if(data == "\u007f" || data == "\b" || data == "0x08") {		//If the user enters back space.
-							writeEmitter.fire("\x1b[D \x1b[D"); 
-							line = line.slice(0,-1);
+							if( line.trim() != PROMPT){
+								writeEmitter.fire("\x1b[D \x1b[D"); 
+								line = line.slice(0,-1);
+							}
+							
 							
 						}
 						else {
@@ -283,12 +334,16 @@ function activate(context) {
 				terminal = vscode.window.createTerminal({name: "VDBUG", pty: pseudoTerminal});
 				terminal.show();
 
+				
+
 				//Using the spawn function in order to open the powershell terminal, and feed it commands.
 				//Spawn can be opened and fed multiple line commands until it's manually closed.
 
-				await terminalOpenPromise;	//Pause function until this promise is resolved by the terminal opening.
+				await terminalOpenPromise;	//Dont spawn GDB process until this promise is resolved by the psuedo terminal opening.
 
-				
+				//Start user terminal with file name and VDBUG> prompt.
+				writeEmitter.fire(`Reading input from ${file_name}... \r\n`);
+				writeEmitter.fire(PROMPT);
 				gdb = spawn(`gdb`, [`--quiet`,`${file_name}`],{cwd: folder_path});
 
 				
@@ -300,21 +355,26 @@ function activate(context) {
 				gdb.on('close', code => {
 					console.log(`GDB exited with code ${code}`);
 
-					writeEmitter.fire(`\r\nGDB exited with code ${code} \r\n`);
+					writeEmitter.fire(`\rGDB exited with code ${code} \r\n`);
 				});
 
 				gdb.stderr.on('data', data => {
-				
-					gdb_interface.processText(data);
+					
+					let  string_data = data.toString();
+					if(!string_data.includes("No such file or directory")){	//Hide warnings related to no file or directory, from skipping over library functions
+						gdb_interface.processText(data);
+					}
+					
 				});		 
 
-				console.log("Trying to pass commands");
+				//Start up commands
+				
 				await gdb_interface.sendCommand(gdb, "set pagination off", false);
-				console.log("First Command attempted!")
 				await gdb_interface.sendCommand(gdb, "set confirm off", false);
-				console.log("Second Command attempted!")
-
 				await gdb_interface.sendCommand(gdb, `set prompt ${PROMPT}`, false);
+
+				parsingCommand = "info functions";
+				await gdb_interface.sendCommand(gdb, "info functions", false);
 		}
 	});
 
@@ -335,29 +395,20 @@ function activate(context) {
 			return;
 		}			
 	});
+	const automateGDB = vscode.commands.registerCommand(`automate_gdb`, async function(){
+
+		if (!gdb || !gdb_interface){
+			console.log("No GBD process running!");
+			vscode.window.showErrorMessage("GDB not running!");
+			return;
+		}
+
+		cmdQueue.push({cmd:"run", display:true});
+
+	})
 
 
-	/* Returns JSON field for local variables.
-
-	{	
-		"local Variables": [
-			x: {
-				"type" : "int"
-				"value": 5
-		
-			},
-			y: {
-				"variable": "y"
-				"type": "int"
-				"value" : 6	
-			
-			
-			}
-		]
-	}
-		*/ 
-	//In Progress.
-	//If we encounter 
+	//Returns JSON with local variables.
 	async function captureLocalVars(data){
 		
 		
@@ -400,7 +451,34 @@ function activate(context) {
 
 
 	function captureBackTrace(data){
-		//foo
+
+		//console.log("Backtrace activated! with data \n",data.toString());
+		const string_data = data.toString();
+		const splitLines = string_data.split(/\r?\n/);
+
+		let stackFunctions = [];
+		let lineNum;
+		const btRe = /^#(\d+)\s+(?:0x[0-9a-fA-F]+\s+in\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*\(([^)]*)\)\s+at\s+([^:]+):(\d+)/; 	//Capture frame number, function name, arg list, file name, and line number.
+		for (let i = 0; i < splitLines.length; i++){
+			const regLine = btRe.exec(splitLines[i]);
+			if(regLine){
+				if(i == 0){
+					lineNum = regLine[5];	//Frame #0 has the line number we're currently at.
+				}
+				//console.log("Caught line: ", regLine);
+				stackFunctions.push(regLine[2])	//
+				
+			}
+			
+		}
+		let currStackObj = {site: stack_site, stacktrace:stackFunctions, line_number:lineNum}
+		stackframes.push(currStackObj);	//On each backtrace call, we create an object with the site/action number and the stacktrace.
+		if(lineNum){
+			stack_site++;
+		}
+		
+		console.log(`Stack Frame -> Site ${currStackObj.site}, StackTrace: ${currStackObj.stacktrace}, Line Number: ${currStackObj.line_number}`);
+		
 	}
 
 	function extractStoppedLine(text) {
@@ -425,7 +503,6 @@ function activate(context) {
 
 		
 		let localLines = data.split(/\r?\n/);
-		
 
 		data = localLines[0].trim(); 
 		
@@ -443,29 +520,36 @@ function activate(context) {
 			}			
 			let func_regex = /^\s*(?:0x[0-9a-fA-F]+\s+in\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*\(/;
 
+			for(const ln of localLines){
+				const t = ln.trim();
+				if (!t) continue;
+				
+
+				if(func_regex.test(t)){
+
+					const lis = func_regex.exec(t);
+					if(!lis) continue;	///
+					//console.log(`Is function ${lis[1]} in list ${func_list}?`)
+
+					if(!func_list.includes(lis[1])){
+						
+
+						finishFromLine = currLine;          // the user-code line where we stepped into the call
+						pendingSkipDecision = true;
+
+						gdb_interface.hideCurrent();
+						cmdQueue.push({cmd: "finish", display: false});	//Automatic-finish
+
+					}
+				
+				}
+			}	
 			//GDB lines can start with "(address) in (function_name)", or just start with the function name.
-		 if(func_regex.test(data)){
-
-			const lis = func_regex.exec(data);
-			console.log(`Is function ${lis[1]} in list ${func_list}?`)
-
-			if(!func_list.includes(lis[1])){
-				skipLine = currLine;
-				pendingFinish = true;
-				//console.log(`SkipLine: ${skipLine}`);
-
-				await gdb_interface.sendCommand(gdb,"finish",false);
-			}
 			
-		}
-
-		else{
-			console.log("Regex failed with data",data);
-		}
-
 	}
 	context.subscriptions.push(gdbCommand)
 	context.subscriptions.push(run_gdb);
+	context.subscriptions.push(automateGDB);
 }
 
 
