@@ -17,6 +17,7 @@ function writeFileExecutable(filePath, contents) {
   fs.chmodSync(filePath, 0o755);
 }
 
+//Grabs current date.
 function nowStamp() {
   const d = new Date();
   const pad = (n) => String(n).padStart(2, "0");
@@ -25,6 +26,7 @@ function nowStamp() {
   )}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
 }
 
+//Spawns
 function spawnLogged(output, cmd, args, options) {
   return new Promise((resolve, reject) => {
     output.appendLine(`\n$ ${cmd} ${args.join(" ")}`);
