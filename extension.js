@@ -271,6 +271,8 @@ function activate(context) {
 					if ((last_cmd == "s" || last_cmd === "step" || last_cmd == "continue"
 						|| last_cmd == "c" || last_cmd == "run" || last_cmd == "r"
 					)){
+
+						
 						//parsingCommand = "backtrace";
 						cmdQueue.push({cmd: "backtrace",display:false});
 						
