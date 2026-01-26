@@ -542,11 +542,32 @@ function makeGDBInterface({writeEmitter, onText, onCommandDone}){
  */
 function activate(context) {
 
+
+	function findCommand(command){
+		let command_trimmed = command.trim();
+		if(/info * locals/.test(command_trimmed)){
+			parsingCommand = "info locals";		
+		} 
+		else if(/info * functions/.test(command_trimmed)){
+			parsingCommand = "info functions";
+		}
+		else if (command_trimmed == "step" ||command_trimmed == "s"){
+			parsingCommand = "step";
+			
+		}
+		else if (command_trimmed == "backtrace" || command_trimmed == "bt"){
+			parsingCommand = "backtrace"
+		}
+		else{
+			//console.log("Command failed: ",command.trim());
+			parsingCommand = "";
+		}
+	}
+
 	async function commandManager(data){
 		if (typeof data != "string"){
 			return;
 		}
-		 
 		const stoppedLine = extractStoppedLine(data);
 
 		if(pendingSkipDecision && stoppedLine != null){
@@ -609,13 +630,8 @@ function activate(context) {
   let parsingCommand = "";
 
   //Figure out which command the user called, to flag the parsingCommand variable.
-  function findCommand(command) {
-    if (/info * locals/.test(command.trim())) {
-      parsingCommand = "info locals";
-    } else {
-      console.log("Command failed: ", command.trim());
-    }
-  }
+
+
 
 
   //Runs GDB on the executable that the user defines.
@@ -691,8 +707,6 @@ function activate(context) {
 								writeEmitter.fire("\x1b[D \x1b[D"); 
 								line = line.slice(0,-1);
 							}
-							
-							
 						}
 						else {
 							writeEmitter.fire(data);
@@ -854,7 +868,7 @@ function activate(context) {
 				if(func_regex.test(t)){
 					const lis = func_regex.exec(t);
 					if(!lis) continue;	
-					//console.log(`Is function ${lis[1]} in list ${func_list}?`)
+					console.log(`Is function ${lis[1]} in list ${func_list}?`);
 					if(!func_list.includes(lis[1])){
 						finishFromLine = currLine;          // the user-code line where we stepped into the call
 						pendingSkipDecision = true;
