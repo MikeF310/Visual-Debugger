@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Labs 4 & 5:  Interactive Data Visualization with D3.js</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div id="tooltip" style="display:none"></div> 
+    <script src="https://unpkg.com/d3-simple-slider"></script>
+
+    <div class="container"> <!-- Centers content and sets max width -->
+        <h1>kittyyyyyyyyyy</h1>
+    <!-- Controls --> 
+    <div class="debugger-toolbar">
+    <button class="btn resume" title="Resume (F8)">▶</button>
+    <button class="btn step-over" title="Step Over (F10)">↷</button>
+    <button class="btn step-into" title="Step Into (F11)">↴</button>
+    <button class="btn step-out" title="Step Out (Shift+F11)">↱</button>
+    <button class="btn stop" title="Stop">■</button>
+    </div>
+     
+     <div class="visualization-area">
+        <div id="stack"></div> 
+        <div id="heap"></div>
+    </div>
+    <!-- Load D3.js -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="js/script.js"></script>
+</body>
+</html>

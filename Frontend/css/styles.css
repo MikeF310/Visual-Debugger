@@ -1,0 +1,69 @@
+.x-axis path,
+.y-axis path,
+.x-axis line,
+.y-axis line {
+    stroke: #333;
+    shape-rendering: crispEdges;
+}
+
+.x-axis text,
+.y-axis text {
+    font-size: 12px;
+    font-family: Arial, sans-serif;
+}
+
+.axis-label {
+    font-size: 14px;
+    font-weight: bold;
+}
+button {
+    padding: 8px 16px;
+    margin-right: 10px;
+}
+.tooltip {
+    position: absolute;
+    text-align: left;
+    padding: 8px;
+    font: 12px sans-serif;
+    background: white;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    pointer-events: none; /* Crucial: lets mouse ignore tooltip so it doesn't flicker */
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+    z-index: 10;
+}
+
+.main-heading-text {
+    font-size: 18px; 
+    font-family: 'Helvetica Neue', Arial, sans-serif; /* Example new font */
+    font-weight: bold;
+    color: gray;
+}
+
+
+.visualization-area {
+    display: flex;            /* Makes children sit side-by-side */
+    flex-direction: row;      /* Horizontal layout */
+    justify-content: center;   /* Centers them in the middle of the screen */
+    align-items: flex-start;  /* Ensures they both start at the same top "margin" */
+    gap: 0px;                /* Creates space between Stack and Heap */
+    margin-top: 20px;         /* Space below the controls */
+}
+
+#stack {
+     overflow: hidden;   
+     resize: both;    /* Disables horizontal resizing, allows vertical */
+     min-height: 100px;   /* Sets a minimum height so it doesn't disappear */
+     border: 1px solid black;
+     background-color: rgb(170, 170, 253);
+     width: 100%;         /* Keeps the width fixed */
+}
+
+#heap {
+     overflow: hidden;   
+     resize: both;    /* Disables horizontal resizing, allows vertical */
+     min-height: 100px;   /* Sets a minimum height so it doesn't disappear */
+     border: 1px solid black;
+     background-color: rgb(255, 208, 119);
+     width: 100%;         /* Keeps the width fixed */
+}

@@ -1,0 +1,19 @@
+{
+  "nodes": [
+    {"id": "Red", "group": 1},
+    {"id": "Blue", "group": 2},
+    {"id": "Green", "group": 3},
+    {"id": "Yellow", "group": 4},
+    {"id": "Orange", "group": 5}
+  ],
+  "links": [
+    {"source": "Red", "target": "Blue", "value": 5},
+    {"source": "Red", "target": "Green", "value": 2},
+    {"source": "Red", "target": "Yellow", "value": 1},
+    {"source": "Blue", "target": "Green", "value": 8},
+    {"source": "Blue", "target": "Orange", "value": 3},
+    {"source": "Green", "target": "Yellow", "value": 7},
+    {"source": "Green", "target": "Orange", "value": 4},
+    {"source": "Yellow", "target": "Orange", "value": 6}
+  ]
+}
