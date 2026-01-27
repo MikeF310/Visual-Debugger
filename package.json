@@ -29,6 +29,10 @@
       {
         "command": "DAP_command",
         "title": "DAP Command"
+      },
+      {
+        "command":"automate_gdb",
+        "title": "Automate GDB"
       }
     ],
     "viewsContainers": {
@@ -53,6 +57,10 @@
     {
       "view":"first_panel",
       "contents":"[Execute GDB](command:execute_gdb)"
+    },
+    {
+      "view":"first_panel",
+      "contents":"[Automate GDB](command:automate_gdb)"
     }
   ] 
   },
