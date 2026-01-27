@@ -26,7 +26,7 @@ function nowStamp() {
   )}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
 }
 
-//Spawns
+//Spawns  
 function spawnLogged(output, cmd, args, options) {
   return new Promise((resolve, reject) => {
     output.appendLine(`\n$ ${cmd} ${args.join(" ")}`);
@@ -104,6 +104,7 @@ function runBuildInTerminal(output, workspaceRoot, buildCmdLine, env) {
       .trim();
 
     term.sendText(`bash -lc ${JSON.stringify(cmd)}`, true);
+	output.appendLine(`Path to JSON: ${env.MEMVIZ_OUT_DIR}`);
 
     // Resolve when the terminal closes.
     const sub = vscode.window.onDidCloseTerminal((closed) => {
@@ -379,31 +380,33 @@ async function runBuildWithWrappers(
 //-----GDB__interface__class
 
 let func_list = [];
-//The shell containing the gdb process.
-let gdb = null;
-//The pseudo terminal.
-let terminal = null;
-let line = "";
-//next command to be parsed.
-let parsingCommand = "";
-//writeEmitter.fire(text) writes text to the terminal.
-let writeEmitter;
-let currLine;
-let pendingFinish = false;
-let skipLine = null;	
-let cmdQueue = [];
-let stackframes = [];
-let pendingSkipDecision = false;
-let finishFromLine = null;
-let stack_site = 0;
-const PROMPT = "VDBUG> ";
-//GDB object
-let gdb_interface = null;
+	//The shell containing the gdb process.
+	let gdb = null;
+	//The pseudo terminal.
+	let terminal = null;
+	let line = "";
+	//next command to be parsed.
+	let parsingCommand = "";
+	//writeEmitter.fire(text) writes text to the terminal.
+	let writeEmitter;
+	let currLine;
+	let pendingFinish = false;
+	let skipLine = null;	
+	let cmdQueue = [];
+
+	let autoStep = false;
+	let stackframes = [];
+	let pendingSkipDecision = false;
+	let finishFromLine = null;
+	let stack_site = 0;
+	const PROMPT = "VDBUG> ";
+	//GDB object
+	let gdb_interface = null;
 
 
 
-function makeGDBInterface({writeEmitter, onText, onCommandDone}){
-		/*
+	function makeGDBInterface({writeEmitter, onText, onCommandDone}){
+			/*
 		The "currentCommand" Object has: 
 		- a display boolean for whether or not to display the output of the current command
 		- Buffer is a string that holds GDB output from the current command, until its done. 
@@ -460,7 +463,7 @@ function makeGDBInterface({writeEmitter, onText, onCommandDone}){
 				carry = ""; // reset so we don’t keep matching old prompt
 				
 				
-				finished.resolve?.();
+				finished.resolve?.(finished);
 
 				onCommandDone?.(finished);	//
 
@@ -508,31 +511,9 @@ function makeGDBInterface({writeEmitter, onText, onCommandDone}){
 		function showCurrent(){
 			if(currentCommand) currentCommand.display = true;
 		}
+
 		//Returns 
 		return {processText,sendCommand,hideCurrent,showCurrent};
-
-
-	}
-
-	function findCommand(command){
-		let command_trimmed = command.trim();
-		if(/info * locals/.test(command_trimmed)){
-			parsingCommand = "info locals";		
-		} 
-		else if(/info * functions/.test(command_trimmed)){
-			parsingCommand = "info functions";
-		}
-		else if (command_trimmed == "step" ||command_trimmed == "s"){
-			parsingCommand = "step";
-			
-		}
-		else if (command_trimmed == "backtrace" || command_trimmed == "bt"){
-			parsingCommand = "backtrace"
-		}
-		else{
-			//console.log("Command failed: ",command.trim());
-			parsingCommand = "";
-		}
 	}
 
 	//Calls the corresponding command parsing function.
@@ -542,7 +523,7 @@ function makeGDBInterface({writeEmitter, onText, onCommandDone}){
  */
 function activate(context) {
 
-
+	
 	function findCommand(command){
 		let command_trimmed = command.trim();
 		if(/info * locals/.test(command_trimmed)){
@@ -623,17 +604,7 @@ function activate(context) {
   //Grabs the first one/ the currently open folder.
   let folder_path = folders[0].uri.fsPath;
 
-  let gdb = null;
-  let terminal = null;
-  let line = "";
-  let arrayOfLines;
-  let parsingCommand = "";
-
   //Figure out which command the user called, to flag the parsingCommand variable.
-
-
-
-
   //Runs GDB on the executable that the user defines.
   const run_gdb = vscode.commands.registerCommand('execute_gdb', async function (){
 		const file_name = await vscode.window.showInputBox({
@@ -645,24 +616,31 @@ function activate(context) {
 
 			//Create pseudoterminal.
 			writeEmitter = new vscode.EventEmitter();
+
+			//Create gdb_interface object
 			gdb_interface = makeGDBInterface({writeEmitter,onText:(text) => commandManager(text), 
-			onCommandDone: async (finished) => {														//Backtrace will be called after the user runs 
-				const last_cmd = (finished?.command ?? "").trim();
-				//const tag = finished.tag ?? "user";
-				parsingCommand = "";
+				onCommandDone: async (finished) => {														//Backtrace will be called after the user runs 
+					const last_cmd = (finished?.command ?? "").trim();
+					//const tag = finished.tag ?? "user";
+					parsingCommand = "";
 
-				if (last_cmd == "backtrace" || last_cmd == "bt"){
-					captureBackTrace(finished.buffer);
-					return;
-				}
-				if ((last_cmd == "s" || last_cmd === "step" || last_cmd == "continue"
-					|| last_cmd == "c" || last_cmd == "run" || last_cmd == "r"
-				)){
+					if (last_cmd == "backtrace" || last_cmd == "bt"){
+						captureBackTrace(finished.buffer);
+						return;
+					}
+					if ((last_cmd == "s" || last_cmd === "step" || last_cmd == "continue"
+						|| last_cmd == "c" || last_cmd == "run" || last_cmd == "r"
+					)){
 
-					//parsingCommand = "backtrace";
-					cmdQueue.push({cmd: "backtrace",display:false});
+						//parsingCommand = "backtrace";
+						cmdQueue.push({cmd: "backtrace",display:false});
+					}
+
+					const out = finished?.buffer ?? "";
+  					const exitRe = /(?:Inferior \d+ \(process \d+\) exited|Program exited|exited normally|exited with code|The program is not being run\.)/i;
+
+
 				}
-			}
 			});
 
 
@@ -769,9 +747,34 @@ function activate(context) {
 			vscode.window.showErrorMessage("GDB not running!");
 			return;
 		}
+		const exitRe = /(?:Inferior \d+ \(process \d+\) exited|Program exited|exited normally|exited with code|The program is not being run\.)/i;
+		await gdb_interface.sendCommand(gdb,"start",true);
 
-		cmdQueue.push({cmd:"run", display:true});
+		writeEmitter.fire('\r\n');
+		while(true){
+			parsingCommand = "step";
 
+			const stepFinish = await gdb_interface.sendCommand(gdb,"step",true);
+			const stepOutput = stepFinish?.buffer ?? "";
+
+			if(exitRe.test(stepOutput)){
+				return;
+			}
+			const shouldfinish = await captureStep(stepOutput);
+
+			if(shouldfinish){
+				const finFinished = await gdb_interface.sendCommand(gdb,"finish",false);
+				const finOutput = finFinished?.buffer ?? "";
+				if(exitRe.test(finOutput)){
+					return;
+				}
+			}
+			
+			const btFinish = await gdb_interface.sendCommand(gdb,"backtrace",false);
+			captureBackTrace(btFinish?.buffer ?? "");
+			if(exitRe.test(btFinish?.buffer ?? "")) return;
+		}
+		
 	})
 
 
@@ -780,9 +783,9 @@ function activate(context) {
 	let localJSON = {};
 	let lines = data.split(/\r?\n/);
 
-	for (let i = 0; i < lines.length - 1; i++) {
-		console.log("Variable -> : " + lines[i] + "\n");
-	}
+		for (let i = 0; i < lines.length - 1; i++) {
+			console.log("Variable -> : " + lines[i] + "\n");
+		}
 	}
 
 
@@ -847,6 +850,7 @@ function activate(context) {
 		}
 		return found; // number or null
 	}
+
 	//Skips over library functions by calling "finish" when a library function is caught by regex.
 	async function captureStep(data){
 		let localLines = data.split(/\r?\n/);
@@ -865,16 +869,19 @@ function activate(context) {
 			for(const ln of localLines){
 				const t = ln.trim();
 				if (!t) continue;
+
 				if(func_regex.test(t)){
 					const lis = func_regex.exec(t);
 					if(!lis) continue;	
 					console.log(`Is function ${lis[1]} in list ${func_list}?`);
 					if(!func_list.includes(lis[1])){
+						
 						finishFromLine = currLine;          // the user-code line where we stepped into the call
 						pendingSkipDecision = true;
 
 						gdb_interface.hideCurrent();
-						cmdQueue.push({cmd: "finish", display: false});	//Automatic-finish
+						//cmdQueue.push({cmd: "finish", display: false});	//Automatic-finish
+						return true;
 					}
 				
 				}
@@ -895,7 +902,7 @@ function activate(context) {
       const workspaceRoot = folders[0].uri.fsPath;
 
       try {
-        const buildCmd = await askBuildCommand("make");
+        const buildCmd = await askBuildCommand("gcc -g main.c");
         if (!buildCmd) return;
 
         const pluginSo = await buildPlugin(output, workspaceRoot);
@@ -913,6 +920,7 @@ function activate(context) {
           vscode.window.showInformationMessage(
             `MemViz build finished OK. Logs in: ${res.sessionDir}`
           );
+		  
         } else {
           vscode.window.showWarningMessage(
             `MemViz build failed (exit ${res.exitCode}). Logs still captured in: ${res.sessionDir}`
