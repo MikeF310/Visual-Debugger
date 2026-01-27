@@ -3,40 +3,21 @@
   "displayName": "VisualDebugger",
   "description": "A Visual Debugger for C. Shows memory, pointers, and stack and heap data.",
   "version": "0.0.1",
-  "type": "commonjs",
+  "publisher": "lilliannedavis",
   "engines": {
-    "vscode": "^1.107.0"
+    "vscode": "^1.80.0"
   },
-  "categories": [
-    "Other"
-  ],
-  "activationEvents": [],
   "main": "./extension.js",
+  "activationEvents": [],
   "contributes": {
     "commands": [
       {
-        "command": "startVD",
-        "title": "Run VD"
-      },
-      {
         "command": "execute_gdb",
-        "title": "Execute GDB"
-      },
-      {
-        "command": "automate_gdb",
-        "title": "Automate GDB"
-      },
-      {
-        "command": "DAP_command",
-        "title": "DAP Command"
+        "title": "VDBUG: Execute GDB"
       },
       {
         "command": "visualdebugger.buildWithMemlog",
-        "title": "VisualDebugger: Build (compile-time memory analysis)"
-      },
-      {
-        "command": "visualdebugger.openLatestLogFolder",
-        "title": "VisualDebugger: Open latest log folder"
+        "title": "VDBUG: Build with Memlog Plugin"
       }
     ],
     "viewsContainers": {
@@ -44,7 +25,7 @@
         {
           "id": "IntroView",
           "title": "Visual Debugger",
-          "icon": "cat.svg"
+          "icon": "$(debug-console)" 
         }
       ]
     },
@@ -52,40 +33,15 @@
       "IntroView": [
         {
           "id": "first_panel",
-          "name": "Visual Debugger",
-          "icon": "cat.svg"
+          "name": "Dashboard"
         }
       ]
     },
-     "viewsWelcome":[
-    {
-      "view":"first_panel",
-      "contents":"[Execute GDB](command:execute_gdb)"
-    },
-    {
-      "view":"first_panel",
-      "contents":"[Automate GDB](command:automate_gdb)"
-    }
-  ] 
-  },
- 
-  "scripts": {
-    "lint": "eslint .",
-    "pretest": "npm run lint",
-    "test": "vscode-test"
-  },
-  "devDependencies": {
-    "vscode": "^1.1.37",
-    "@types/mocha": "^10.0.10",
-    "@types/node": "^22.19.3",
-    "@types/vscode": "^1.107.0",
-    "@vscode/test-cli": "^0.0.12",
-    "@vscode/test-electron": "^2.5.2",
-    "eslint": "^9.39.1"
-  },
-  "dependencies": {
-    "d3": "^7.9.0",
-    "debug-tracker-vscode": "^0.0.15",
-    "keypress": "^0.2.1"
+    "viewsWelcome": [
+      {
+        "view": "first_panel",
+        "contents": "[Start Debugger](command:execute_gdb)\n[Build with Plugin](command:visualdebugger.buildWithMemlog)"
+      }
+    ]
   }
 }
