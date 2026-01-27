@@ -1115,16 +1115,7 @@ namespace{
     }
   };
 
-
-
-  // Called at end of compilation
-  static void memlog_finish(void*, void*) {
-    out_close();
-}
-
-}
-
-
+} // end anonymous namespace
 
 int plugin_init(struct plugin_name_args *plugin_info, struct plugin_gcc_version *version) {
   if (!plugin_default_version_check(version, &gcc_version))

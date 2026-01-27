@@ -23,8 +23,8 @@
         "title": "Execute GDB"
       },
       {
-        "command": "gdb_command",
-        "title": "GDB Command"
+        "command": "automate_gdb",
+        "title": "Automate GDB"
       },
       {
         "command": "DAP_command",
